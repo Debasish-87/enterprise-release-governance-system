@@ -1,6 +1,6 @@
-# Intelligent Release Governance System (IRGS)
+# Enterprise Release Governance System (ERGS)
 
-IRGS is an **enterprise-style Release Governance Platform** built using **GitHub Actions**.
+ERGS is an **enterprise-style Release Governance Platform** built using **GitHub Actions**.
 
 It automates:
 
@@ -19,19 +19,19 @@ It automates:
 All pipeline outputs are deployed automatically to GitHub Pages.
 
 ### Main Portal
-- [IRGS Reports Portal](https://debasish-87.github.io/Intelligent-Release-Governance-System/)
+- [ERGS Reports Portal](https://debasish-87.github.io/enterprise-release-governance-system/)
 
 ### Reports Navigation
 
 | Report Type | Live Link |
 |-----------|----------|
-| Release Dashboard | [Open Dashboard](https://debasish-87.github.io/Intelligent-Release-Governance-System/dashboard/) |
-| Allure Test Report | [Open Allure Report](https://debasish-87.github.io/Intelligent-Release-Governance-System/allure/) |
-| Security Reports | [Open Security Reports](https://debasish-87.github.io/Intelligent-Release-Governance-System/security/) |
-| SBOM Reports | [Open SBOM Reports](https://debasish-87.github.io/Intelligent-Release-Governance-System/sbom/) |
-| KPQE Platform Reports | [Open KPQE Reports](https://debasish-87.github.io/Intelligent-Release-Governance-System/kpqe/) |
-| Final Decision Output | [Open Final Decision](https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/) |
-| Final Decision JSON | [final-decision.json](https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/final-decision.json) |
+| Release Dashboard | [Open Dashboard](https://debasish-87.github.io/enterprise-release-governance-system/dashboard/) |
+| Allure Test Report | [Open Allure Report](https://debasish-87.github.io/enterprise-release-governance-system/allure/) |
+| Security Reports | [Open Security Reports](https://debasish-87.github.io/enterprise-release-governance-system/security/) |
+| SBOM Reports | [Open SBOM Reports](https://debasish-87.github.io/enterprise-release-governance-system/sbom/) |
+| KPQE Platform Reports | [Open KPQE Reports](https://debasish-87.github.io/enterprise-release-governance-system/kpqe/) |
+| Final Decision Output | [Open Final Decision](https://debasish-87.github.io/enterprise-release-governance-system/decision/) |
+| Final Decision JSON | [final-decision.json](https://debasish-87.github.io/enterprise-release-governance-system/decision/final-decision.json) |
 
 ---
 
@@ -39,18 +39,18 @@ All pipeline outputs are deployed automatically to GitHub Pages.
 
 Example successful run:
 
-- Repo: `Debasish-87/Intelligent-Release-Governance-System`
+- Repo: `Debasish-87/enterprise-release-governance-system`
 - Commit: `d6c797c89d6a6964b27e1f01dc2ae2f67762ac59`
 - GitHub Actions Run:  
-  [Open Run #21768128714](https://github.com/Debasish-87/Intelligent-Release-Governance-System/actions/runs/21768128714)
+  [Open Run #21768128714](https://github.com/Debasish-87/enterprise-release-governance-system/actions/runs/21768128714)
 
 ---
 
-## Why IRGS?
+## Why ERGS?
 
 Modern releases require more than only “tests passed”.
 
-IRGS enforces governance using **multi-layer validation** and generates a final decision:
+ERGS enforces governance using **multi-layer validation** and generates a final decision:
 
 - **GO** → safe to release  
 - **HOLD** → manual review required  
@@ -140,7 +140,7 @@ Then deploys all reports into GitHub Pages:
 
 ## Final Decision Logic
 
-IRGS generates the final decision using combined governance rules.
+ERGS generates the final decision using combined governance rules.
 
 ### GO
 - Layer 1 tests passed  
@@ -163,7 +163,7 @@ IRGS generates the final decision using combined governance rules.
 
 Final decision JSON is published here:
 
-- [final-decision.json](https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/final-decision.json)
+- [final-decision.json](https://debasish-87.github.io/enterprise-release-governance-system/decision/final-decision.json)
 
 ---
 
@@ -198,7 +198,7 @@ Final decision JSON is published here:
 ## Project Structure
 
 ```bash
-Intelligent-Release-Governance-System/
+enterprise-release-governance-system/
 │
 ├── .github/
 │   └── workflows/
@@ -315,3 +315,4 @@ Debasish-87
 GitHub: [https://github.com/Debasish-87](https://github.com/Debasish-87)
 
 ```
+
