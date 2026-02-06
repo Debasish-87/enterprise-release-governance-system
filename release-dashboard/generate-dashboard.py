@@ -8,6 +8,8 @@ from datetime import datetime
 # -----------------------------
 def safe_read_json(path, default=None):
     try:
+        if not os.path.exists(path):
+            return default if default is not None else {}
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
@@ -16,6 +18,8 @@ def safe_read_json(path, default=None):
 
 def read_text(path, default=""):
     try:
+        if not os.path.exists(path):
+            return default
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
@@ -23,8 +27,11 @@ def read_text(path, default=""):
 
 
 def html_escape(s: str) -> str:
+    if s is None:
+        return ""
     return (
-        s.replace("&", "&amp;")
+        str(s)
+        .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
@@ -42,8 +49,22 @@ generated_time = datetime.utcnow().isoformat() + "Z"
 owner = repo.split("/")[0] if "/" in repo else "UNKNOWN"
 repo_name = repo.split("/")[1] if "/" in repo else "UNKNOWN"
 
-# GitHub Pages Allure URL
-allure_pages_url = f"https://{owner}.github.io/{repo_name}/"
+# GitHub Pages root URL (repo pages)
+pages_root_url = f"https://{owner}.github.io/{repo_name}/"
+
+# In your Pages structure you have:
+# /allure/
+# /security/
+# /sbom/
+# /kpqe/
+# /dashboard/
+# /decision/
+allure_pages_url = f"{pages_root_url}allure/"
+security_pages_url = f"{pages_root_url}security/"
+sbom_pages_url = f"{pages_root_url}sbom/"
+kpqe_pages_url = f"{pages_root_url}kpqe/"
+dashboard_pages_url = f"{pages_root_url}dashboard/"
+decision_pages_url = f"{pages_root_url}decision/"
 
 
 # ============================================================
@@ -52,13 +73,14 @@ allure_pages_url = f"https://{owner}.github.io/{repo_name}/"
 allure_summary_path = "application-testing/target/site/allure-report/widgets/summary.json"
 allure_summary = safe_read_json(allure_summary_path, {})
 
-stat = allure_summary.get("statistic", {})
-allure_total = stat.get("total", 0)
-allure_passed = stat.get("passed", 0)
-allure_failed = stat.get("failed", 0)
-allure_broken = stat.get("broken", 0)
-allure_skipped = stat.get("skipped", 0)
+stat = allure_summary.get("statistic", {}) or {}
+allure_total = stat.get("total", 0) or 0
+allure_passed = stat.get("passed", 0) or 0
+allure_failed = stat.get("failed", 0) or 0
+allure_broken = stat.get("broken", 0) or 0
+allure_skipped = stat.get("skipped", 0) or 0
 
+# FIX: If total == 0, it is FAILED (no tests ran)
 if allure_total > 0 and allure_failed == 0 and allure_broken == 0:
     allure_status = "✅ PASSED"
 else:
@@ -88,16 +110,22 @@ if isinstance(gitleaks_json, list):
 semgrep_path = "security-testing/reports/semgrep-report.json"
 semgrep_json = safe_read_json(semgrep_path, {})
 
-semgrep_results = semgrep_json.get("results", [])
+semgrep_results = semgrep_json.get("results", []) or []
 semgrep_findings = len(semgrep_results)
 
+# FIX: Count severity from ALL results, not only first 10
 semgrep_sev = {"ERROR": 0, "WARNING": 0, "INFO": 0}
 semgrep_top = []
 
-for r in semgrep_results[:10]:
-    level = r.get("extra", {}).get("severity", "INFO").upper()
-    semgrep_sev[level] = semgrep_sev.get(level, 0) + 1
+for r in semgrep_results:
+    level = (r.get("extra", {}).get("severity") or "INFO").upper()
+    if level not in semgrep_sev:
+        semgrep_sev[level] = 0
+    semgrep_sev[level] += 1
 
+# Top findings list only 10
+for r in semgrep_results[:10]:
+    level = (r.get("extra", {}).get("severity") or "INFO").upper()
     path = r.get("path", "unknown")
     check_id = r.get("check_id", "unknown")
     msg = r.get("extra", {}).get("message", "no message")
@@ -105,22 +133,24 @@ for r in semgrep_results[:10]:
 
 
 # ---- TRIVY ----
-trivy_path = "security-testing/reports/trivy-report.json"
+# FIX: your artifact has trivy-fs-report.json (not trivy-report.json)
+trivy_path = "security-testing/reports/trivy-fs-report.json"
 trivy_json = safe_read_json(trivy_path, {})
 
 trivy_findings = 0
 trivy_sev = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
 trivy_top = []
 
-results = trivy_json.get("Results", [])
+results = trivy_json.get("Results", []) or []
 
 for res in results:
     vulns = res.get("Vulnerabilities", []) or []
     for v in vulns:
         trivy_findings += 1
         sev = (v.get("Severity") or "LOW").upper()
-        if sev in trivy_sev:
-            trivy_sev[sev] += 1
+        if sev not in trivy_sev:
+            trivy_sev[sev] = 0
+        trivy_sev[sev] += 1
 
         if len(trivy_top) < 10:
             vid = v.get("VulnerabilityID", "UNKNOWN")
@@ -162,7 +192,9 @@ for m in matches:
     artifact = m.get("artifact", {}) or {}
 
     sev = (vuln.get("severity") or "UNKNOWN").upper()
-    grype_sev[sev] = grype_sev.get(sev, 0) + 1
+    if sev not in grype_sev:
+        grype_sev[sev] = 0
+    grype_sev[sev] += 1
 
     if len(grype_top) < 10:
         vid = vuln.get("id", "UNKNOWN")
@@ -231,23 +263,33 @@ for p in pod_items:
 
 
 # ============================================================
-# 5) FINAL DECISION (Simple Logic)
+# 5) FINAL DECISION (MATCH LAYER 6)
 # ============================================================
 
-# (basic rule)
+# Normalize Layer1 status for JSON
+layer1_status = "PASSED" if ("PASSED" in allure_status) else "FAILED"
+
 final_decision = "GO ✅"
 
-if allure_failed > 0 or allure_broken > 0:
-    final_decision = "NO-GO ❌ (Automation Tests Failed)"
+# Rule 1: Layer1 must PASS
+if layer1_status != "PASSED":
+    final_decision = "NO-GO ❌"
 
-elif trivy_sev["CRITICAL"] > 0 or trivy_sev["HIGH"] > 0:
-    final_decision = "NO-GO ❌ (Security Vulnerabilities Found)"
+# Rule 2: Semgrep ERROR -> HOLD
+elif semgrep_sev.get("ERROR", 0) > 0:
+    final_decision = "HOLD ⏸️"
 
-elif grype_sev["CRITICAL"] > 0 or grype_sev["HIGH"] > 0:
-    final_decision = "NO-GO ❌ (SBOM Vulnerabilities Found)"
+# Rule 3: Trivy HIGH/CRITICAL -> NO-GO
+elif trivy_sev.get("CRITICAL", 0) > 0 or trivy_sev.get("HIGH", 0) > 0:
+    final_decision = "NO-GO ❌"
 
-elif "RELEASE BLOCKED" in kpqe_text:
-    final_decision = "NO-GO ❌ (Platform Not Healthy)"
+# Rule 4: Grype HIGH/CRITICAL -> NO-GO
+elif grype_sev.get("CRITICAL", 0) > 0 or grype_sev.get("HIGH", 0) > 0:
+    final_decision = "NO-GO ❌"
+
+# Rule 5: KPQE blocked -> NO-GO
+elif "BLOCKED" in kpqe_decision.upper():
+    final_decision = "NO-GO ❌"
 
 
 # ============================================================
@@ -351,10 +393,10 @@ html = f"""
     <h3>📦 Trivy</h3>
     <p><b>Total Vulnerabilities:</b> {trivy_findings}</p>
     <p>
-      <b>CRITICAL:</b> {trivy_sev["CRITICAL"]} |
-      <b>HIGH:</b> {trivy_sev["HIGH"]} |
-      <b>MEDIUM:</b> {trivy_sev["MEDIUM"]} |
-      <b>LOW:</b> {trivy_sev["LOW"]}
+      <b>CRITICAL:</b> {trivy_sev.get("CRITICAL",0)} |
+      <b>HIGH:</b> {trivy_sev.get("HIGH",0)} |
+      <b>MEDIUM:</b> {trivy_sev.get("MEDIUM",0)} |
+      <b>LOW:</b> {trivy_sev.get("LOW",0)}
     </p>
     <h4>Top Vulnerabilities</h4>
     {list_block(trivy_top)}
@@ -372,11 +414,11 @@ html = f"""
 
   <p><b>Grype Findings:</b> {grype_findings}</p>
   <p>
-    <b>CRITICAL:</b> {grype_sev["CRITICAL"]} |
-    <b>HIGH:</b> {grype_sev["HIGH"]} |
-    <b>MEDIUM:</b> {grype_sev["MEDIUM"]} |
-    <b>LOW:</b> {grype_sev["LOW"]} |
-    <b>UNKNOWN:</b> {grype_sev["UNKNOWN"]}
+    <b>CRITICAL:</b> {grype_sev.get("CRITICAL",0)} |
+    <b>HIGH:</b> {grype_sev.get("HIGH",0)} |
+    <b>MEDIUM:</b> {grype_sev.get("MEDIUM",0)} |
+    <b>LOW:</b> {grype_sev.get("LOW",0)} |
+    <b>UNKNOWN:</b> {grype_sev.get("UNKNOWN",0)}
   </p>
 
   <h4>Top Vulnerabilities</h4>
@@ -407,6 +449,14 @@ html = f"""
 <div class="card">
   <h2>🚦 Final Release Decision</h2>
   <p style="font-size:20px;"><b>{final_decision}</b></p>
+
+  <p>
+    <b>Dashboard:</b> <a href="{dashboard_pages_url}" target="_blank">{dashboard_pages_url}</a><br/>
+    <b>Security:</b> <a href="{security_pages_url}" target="_blank">{security_pages_url}</a><br/>
+    <b>SBOM:</b> <a href="{sbom_pages_url}" target="_blank">{sbom_pages_url}</a><br/>
+    <b>KPQE:</b> <a href="{kpqe_pages_url}" target="_blank">{kpqe_pages_url}</a><br/>
+    <b>Decision JSON:</b> <a href="{decision_pages_url}" target="_blank">{decision_pages_url}</a><br/>
+  </p>
 </div>
 
 </body>
@@ -414,24 +464,24 @@ html = f"""
 """
 
 os.makedirs("release-dashboard", exist_ok=True)
+os.makedirs("release-dashboard/output", exist_ok=True)
+
+# IMPORTANT:
+# Pages uses /dashboard/ so index.html should also exist inside output/
+with open("release-dashboard/output/index.html", "w", encoding="utf-8") as f:
+    f.write(html)
 
 with open("release-dashboard/index.html", "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ Release dashboard generated: release-dashboard/index.html")
+print("✅ Release dashboard generated:")
+print(" - release-dashboard/index.html")
+print(" - release-dashboard/output/index.html")
 
 
 # ============================================================
 # EXTRA: Generate release-summary.json (FOR LAYER 6)
 # ============================================================
-# ============================================================
-# EXTRA: Generate release-summary.json (FOR LAYER 6)
-# ============================================================
-
-# Layer 6 expects strict keys: layers -> layer1/layer2/layer3/layer4
-# And status should be PASSED/FAILED (not emoji)
-
-layer1_status = "PASSED" if ("PASSED" in allure_status) else "FAILED"
 
 release_summary = {
     "repo": repo,
@@ -499,13 +549,6 @@ release_summary = {
         }
     }
 }
-
-# IMPORTANT:
-# Layer 6 reads from release-decision/input/release-summary.json
-# But Layer 5 will upload this file as artifact.
-# So keep it inside release-dashboard/output/
-
-os.makedirs("release-dashboard/output", exist_ok=True)
 
 with open("release-dashboard/output/release-summary.json", "w", encoding="utf-8") as f:
     json.dump(release_summary, f, indent=2)

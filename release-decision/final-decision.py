@@ -15,6 +15,7 @@ def safe_read_json(path):
     except Exception:
         return None
 
+
 def normalize_summary(summary: dict) -> dict:
     """
     Ensure the JSON always has:
@@ -57,6 +58,7 @@ def normalize_summary(summary: dict) -> dict:
     layers["layer4"].setdefault("kpqe_decision", "UNKNOWN")
 
     return summary
+
 
 def decision_rule(summary):
     """
@@ -129,7 +131,7 @@ def main():
             print(" -", p)
         exit(1)
 
-    # ✅ FIX: normalize structure (prevents KeyError: layers)
+    # Normalize structure (prevents KeyError: layers)
     summary = normalize_summary(dashboard_json)
 
     final = {
@@ -150,8 +152,12 @@ def main():
     final["reasoning"].append(f"Input Path Used = {used_path}")
     final["reasoning"].append(f"Layer1 status = {summary['layers']['layer1']['status']}")
     final["reasoning"].append(f"Semgrep ERROR = {summary['layers']['layer2']['semgrep']['error']}")
-    final["reasoning"].append(f"Trivy HIGH/CRITICAL = {summary['layers']['layer2']['trivy']['high']}/{summary['layers']['layer2']['trivy']['critical']}")
-    final["reasoning"].append(f"Grype HIGH/CRITICAL = {summary['layers']['layer3']['grype']['high']}/{summary['layers']['layer3']['grype']['critical']}")
+    final["reasoning"].append(
+        f"Trivy HIGH/CRITICAL = {summary['layers']['layer2']['trivy']['high']}/{summary['layers']['layer2']['trivy']['critical']}"
+    )
+    final["reasoning"].append(
+        f"Grype HIGH/CRITICAL = {summary['layers']['layer3']['grype']['high']}/{summary['layers']['layer3']['grype']['critical']}"
+    )
     final["reasoning"].append(f"KPQE Decision = {summary['layers']['layer4']['kpqe_decision']}")
 
     # Save output
@@ -177,6 +183,11 @@ def main():
     # If NO-GO -> fail pipeline
     if final["final_decision"] == "NO-GO":
         exit(1)
+
+    # If HOLD -> fail pipeline too (recommended)
+    if final["final_decision"] == "HOLD":
+        exit(1)
+
 
 if __name__ == "__main__":
     main()

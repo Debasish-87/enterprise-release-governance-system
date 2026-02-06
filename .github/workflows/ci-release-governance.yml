@@ -369,6 +369,8 @@ jobs:
           path: |
             kpqe-platform-testing/kpqe-release-decision.txt
             kpqe-platform-testing/reports/
+
+            
   # ============================================================
   #  LAYER 5 — Release Dashboard
   # ============================================================
@@ -397,11 +399,29 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: |
-            allure-report
-            security-reports
-            sbom-reports
-            kpqe-platform-reports
+          pattern: "*"
+          merge-multiple: false
+
+      # ✅ FIX: Remove unwanted artifacts (like kind logs) safely
+      - name: Keep only required artifacts
+        run: |
+          echo "===== BEFORE FILTER ====="
+          ls -la artifacts || true
+
+          mkdir -p artifacts_filtered
+
+          # keep only these
+          for d in allure-report security-reports sbom-reports kpqe-platform-reports; do
+            if [ -d "artifacts/$d" ]; then
+              cp -r "artifacts/$d" artifacts_filtered/
+            fi
+          done
+
+          rm -rf artifacts
+          mv artifacts_filtered artifacts
+
+          echo "===== AFTER FILTER ====="
+          ls -la artifacts || true
 
       - name: Debug - list downloaded artifacts
         run: |
@@ -450,6 +470,11 @@ jobs:
             echo "✅ Copied release-summary.json -> output/"
           fi
 
+          # Copy release-summary.json (already output)
+          if [ -f "release-dashboard/output/release-summary.json" ]; then
+            echo "✅ release-summary.json already present in output/"
+          fi
+
           # Final check
           if [ ! -f "release-dashboard/output/index.html" ]; then
             echo "❌ index.html missing in output/"
@@ -472,10 +497,9 @@ jobs:
           path: release-dashboard/output/
 
 
-            # ============================================================
+  # ============================================================
   #  LAYER 6 — Final Release Decision Engine + GitHub Pages Deploy
   # ============================================================
-
   final-release-decision:
     name: Layer 6 - Final Release Decision Engine + Deploy Pages
     runs-on: ubuntu-latest
@@ -631,6 +655,7 @@ jobs:
           # ---------------------------
           mkdir -p public/dashboard
           cp -r artifacts/release-dashboard/* public/dashboard/ || true
+          cp -r artifacts/release-dashboard/output/* public/dashboard/ || true
 
           # ---------------------------
           # Final Decision
@@ -656,7 +681,6 @@ jobs:
               a { text-decoration: none; }
               a:hover { text-decoration: underline; }
               .card { max-width: 900px; padding: 18px; border: 1px solid #ddd; border-radius: 10px; }
-              pre { background: #f6f6f6; padding: 12px; border-radius: 8px; overflow:auto; }
             </style>
           </head>
           <body>
@@ -666,18 +690,7 @@ jobs:
                 <li><a href="./semgrep-report.json">Semgrep Report (JSON)</a></li>
                 <li><a href="./trivy-fs-report.json">Trivy FS Report (JSON)</a></li>
               </ul>
-              <h3>Files</h3>
-              <pre id="files">Loading...</pre>
             </div>
-            <script>
-              fetch("./").then(() => {
-                document.getElementById("files").textContent =
-                  "Open JSON links above to view reports.";
-              }).catch(() => {
-                document.getElementById("files").textContent =
-                  "Open JSON links above to view reports.";
-              });
-            </script>
           </body>
           </html>
           EOF
