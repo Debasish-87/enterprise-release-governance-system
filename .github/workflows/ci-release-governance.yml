@@ -265,9 +265,6 @@ jobs:
           name: sbom-reports
           path: sbom-testing/reports/
 
-  # ============================================================
-  #  LAYER 4 — KPQE Platform Testing (KIND + pytest)
-  # ============================================================
   kpqe-platform-testing:
     name: Layer 4 - Kubernetes Readiness + KPQE Platform Testing
     runs-on: ubuntu-latest
@@ -290,48 +287,33 @@ jobs:
           sudo mv kubectl /usr/local/bin/kubectl
           kubectl version --client
 
-      - name: Setup KIND cluster
-        uses: helm/kind-action@v1.10.0
+      - name: Setup KIND cluster (OFFICIAL)
+        uses: engineerd/setup-kind@v0.6.2
         with:
-          cluster_name: kpqe-cluster
+          name: kpqe-cluster
           wait: 120s
 
-      # ✅ FIX: Auto-detect KIND context (no hardcoding)
-      - name: Detect + Set KIND kubecontext (GUARANTEED)
+      - name: Debug kubeconfig + context
         run: |
-          echo "===== Checking kubeconfig ====="
+          echo "===== kubeconfig ====="
           ls -la $HOME/.kube || true
-          ls -la $HOME/.kube/config || true
+          cat $HOME/.kube/config || true
 
-          if [ ! -f "$HOME/.kube/config" ]; then
-            echo "❌ kubeconfig not found at $HOME/.kube/config"
-            exit 1
-          fi
-
-          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
-          export KUBECONFIG=$HOME/.kube/config
-
-          echo "===== Available contexts ====="
+          echo "===== contexts ====="
           kubectl config get-contexts || true
 
-          # Find KIND context automatically
-          KIND_CONTEXT=$(kubectl config get-contexts -o name | grep "^kind-" | head -n 1 || true)
+          echo "===== current context ====="
+          kubectl config current-context || true
 
-          if [ -z "$KIND_CONTEXT" ]; then
-            echo "❌ No KIND context found!"
-            echo "Dumping contexts:"
-            kubectl config get-contexts || true
-            exit 1
-          fi
+          kubectl cluster-info || true
 
-          echo "✅ Found KIND context: $KIND_CONTEXT"
-          kubectl config use-context "$KIND_CONTEXT"
+      - name: Force KIND context
+        run: |
+          kubectl config use-context kind-kpqe-cluster
           kubectl config current-context
 
       - name: Wait for Kubernetes API Ready
         run: |
-          export KUBECONFIG=$HOME/.kube/config
-
           for i in {1..40}; do
             echo "Attempt $i: Checking cluster..."
             kubectl get nodes && exit 0
@@ -344,7 +326,6 @@ jobs:
 
       - name: Verify Kubernetes Cluster
         run: |
-          export KUBECONFIG=$HOME/.kube/config
           kubectl cluster-info
           kubectl get nodes -o wide
           kubectl get namespaces
@@ -357,7 +338,6 @@ jobs:
 
       - name: Apply KPQE Namespace + RBAC
         run: |
-          export KUBECONFIG=$HOME/.kube/config
           kubectl apply -f kpqe-platform-testing/k8s/namespace.yaml
           kubectl apply -f kpqe-platform-testing/k8s/kpqe-rbac.yaml
 
@@ -376,8 +356,6 @@ jobs:
       - name: Export Cluster + Pod Health (JSON)
         if: always()
         run: |
-          export KUBECONFIG=$HOME/.kube/config
-
           mkdir -p kpqe-platform-testing/reports
           kubectl get nodes -o json > kpqe-platform-testing/reports/nodes.json
           kubectl get pods -A -o json > kpqe-platform-testing/reports/pods.json
