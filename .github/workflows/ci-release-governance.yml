@@ -322,10 +322,26 @@ jobs:
           pytest -q platform-tests --disable-warnings --maxfail=1
 
       - name: Evaluate KPQE Quality Gate
+        if: always()
         run: |
           cd kpqe-platform-testing
           python -m quality_gates.evaluate_platform > kpqe-release-decision.txt
           cat kpqe-release-decision.txt
+
+      # ✅ EXTRA: Export cluster health JSON for dashboard
+      - name: Export Cluster + Pod Health (JSON)
+        if: always()
+        run: |
+          mkdir -p kpqe-platform-testing/reports
+
+          echo "Exporting nodes..."
+          kubectl get nodes -o json > kpqe-platform-testing/reports/nodes.json
+
+          echo "Exporting pods..."
+          kubectl get pods -A -o json > kpqe-platform-testing/reports/pods.json
+
+          echo "Exporting namespaces..."
+          kubectl get ns -o json > kpqe-platform-testing/reports/namespaces.json
 
       - name: Upload KPQE Reports
         uses: actions/upload-artifact@v4
@@ -334,8 +350,12 @@ jobs:
           name: kpqe-platform-reports
           path: |
             kpqe-platform-testing/kpqe-release-decision.txt
+            kpqe-platform-testing/reports/
 
 
+  # ============================================================
+  # ✅ LAYER 5 — Release Dashboard
+  # ============================================================
   release-dashboard:
     name: Layer 5 - Single Consolidated Release Dashboard
     runs-on: ubuntu-latest
@@ -351,10 +371,31 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dashboard requirements
+      # ✅ Download all artifacts from previous layers
+      - name: Download all workflow artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # ✅ Copy artifacts into expected folders (so dashboard script can read)
+      - name: Prepare dashboard inputs
         run: |
-          python -m pip install --upgrade pip
-          pip install -r release-dashboard/requirements.txt
+          mkdir -p security-testing/reports
+          mkdir -p sbom-testing/reports
+          mkdir -p kpqe-platform-testing/reports
+          mkdir -p application-testing/target/site/allure-report
+
+          # Allure
+          cp -r artifacts/allure-report/* application-testing/target/site/allure-report/ || true
+
+          # Security
+          cp -r artifacts/security-reports/* security-testing/reports/ || true
+
+          # SBOM
+          cp -r artifacts/sbom-reports/* sbom-testing/reports/ || true
+
+          # KPQE
+          cp -r artifacts/kpqe-platform-reports/* kpqe-platform-testing/ || true
 
       - name: Generate dashboard
         run: |
@@ -365,4 +406,4 @@ jobs:
         if: always()
         with:
           name: release-dashboard
-          path: release-dashboard/output/
+          path: release-dashboard/index.html
