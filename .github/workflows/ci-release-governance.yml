@@ -470,7 +470,9 @@ jobs:
         with:
           name: release-dashboard
           path: release-dashboard/output/
-  # ============================================================
+
+
+            # ============================================================
   #  LAYER 6 — Final Release Decision Engine + GitHub Pages Deploy
   # ============================================================
 
@@ -493,6 +495,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r release-decision/requirements.txt
+
       # ============================================================
       # Download ONLY release-dashboard artifact for decision engine
       # ============================================================
@@ -636,15 +639,131 @@ jobs:
           cp -r artifacts/final-release-decision/* public/decision/ || true
 
           # ============================================================
-          # ✅ FIX: Auto-create index.html inside folders (avoid 404)
+          # ✅ FIX: Create proper viewers for folders (avoid 404)
           # ============================================================
-          for d in allure security sbom kpqe dashboard decision; do
-            if [ -d "public/$d" ] && [ ! -f "public/$d/index.html" ]; then
-              echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>$d reports</title></head><body><h2>$d reports</h2><p>No index.html found. Showing file list:</p><pre>" > "public/$d/index.html"
-              ls -la "public/$d" >> "public/$d/index.html" || true
-              echo "</pre></body></html>" >> "public/$d/index.html"
-            fi
-          done
+
+          # Security Viewer
+          cat > public/security/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1"/>
+            <title>Security Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 24px; }
+              ul { line-height: 1.9; }
+              a { text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .card { max-width: 900px; padding: 18px; border: 1px solid #ddd; border-radius: 10px; }
+              pre { background: #f6f6f6; padding: 12px; border-radius: 8px; overflow:auto; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h2>🔐 Security Reports</h2>
+              <ul>
+                <li><a href="./semgrep-report.json">Semgrep Report (JSON)</a></li>
+                <li><a href="./trivy-fs-report.json">Trivy FS Report (JSON)</a></li>
+              </ul>
+              <h3>Files</h3>
+              <pre id="files">Loading...</pre>
+            </div>
+            <script>
+              fetch("./").then(() => {
+                document.getElementById("files").textContent =
+                  "Open JSON links above to view reports.";
+              }).catch(() => {
+                document.getElementById("files").textContent =
+                  "Open JSON links above to view reports.";
+              });
+            </script>
+          </body>
+          </html>
+          EOF
+
+          # SBOM Viewer
+          cat > public/sbom/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1"/>
+            <title>SBOM Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 24px; }
+              ul { line-height: 1.9; }
+              a { text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .card { max-width: 900px; padding: 18px; border: 1px solid #ddd; border-radius: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h2>📦 SBOM Reports</h2>
+              <ul>
+                <li><a href="./sbom-cyclonedx.json">CycloneDX SBOM (JSON)</a></li>
+                <li><a href="./sbom-vuln-report.json">SBOM Vulnerability Report (JSON)</a></li>
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
+
+          # KPQE Viewer
+          cat > public/kpqe/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1"/>
+            <title>KPQE Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 24px; }
+              ul { line-height: 1.9; }
+              a { text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .card { max-width: 900px; padding: 18px; border: 1px solid #ddd; border-radius: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h2>☸️ KPQE Platform Reports</h2>
+              <ul>
+                <li><a href="./kpqe-release-decision.txt">KPQE Release Decision (TXT)</a></li>
+                <li><a href="./reports/">Cluster Reports Folder</a></li>
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
+
+          # Final Decision Viewer
+          cat > public/decision/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1"/>
+            <title>Final Release Decision</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 24px; }
+              ul { line-height: 1.9; }
+              a { text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .card { max-width: 900px; padding: 18px; border: 1px solid #ddd; border-radius: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h2>✅ Final Release Decision</h2>
+              <ul>
+                <li><a href="./final-decision.json">final-decision.json</a></li>
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
 
           # ============================================================
           # Root index.html
