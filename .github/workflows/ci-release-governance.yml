@@ -24,6 +24,26 @@ jobs:
         uses: actions/checkout@v4
 
       # ------------------------------
+      # ✅ STAGE 1 — Source Validation & Pre-Checks
+      # ------------------------------
+      - name: Stage 1 - Validate Repository Structure
+        run: |
+          echo "===== Repo Root Files ====="
+          ls -la
+
+          echo "===== Checking required folders ====="
+          test -d application-testing || (echo "❌ application-testing folder missing" && exit 1)
+          test -d security-testing || (echo "❌ security-testing folder missing" && exit 1)
+
+          echo "===== Checking required files ====="
+          test -f application-testing/pom.xml || (echo "❌ application-testing/pom.xml missing" && exit 1)
+          test -f security-testing/run-gitleaks.sh || (echo "❌ run-gitleaks.sh missing" && exit 1)
+          test -f security-testing/run-semgrep.sh || (echo "❌ run-semgrep.sh missing" && exit 1)
+          test -f security-testing/run-trivy.sh || (echo "❌ run-trivy.sh missing" && exit 1)
+
+          echo "✅ Stage 1 validation passed"
+
+      # ------------------------------
       # 2) Setup Java + Maven
       # ------------------------------
       - name: Setup Java 21
@@ -168,13 +188,22 @@ jobs:
           mvn clean test -Dheadless=true
 
       # ------------------------------
-      # 12) Generate Allure Report
+      # ✅ FIX: Allure Maven plugin missing
       # ------------------------------
-      - name: Generate Allure Report
+      - name: Generate Allure Report (CLI Mode - No pom.xml plugin needed)
         if: always()
         run: |
+          echo "===== Installing Allure CLI ====="
+          curl -Ls https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz -o allure.tgz
+          tar -xzf allure.tgz
+          sudo mv allure-2.27.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+
+          echo "===== Generating Allure Report ====="
           cd application-testing
-          mvn allure:report
+
+          mkdir -p target/site/allure-report
+          allure generate target/allure-results -o target/site/allure-report --clean
 
       # ------------------------------
       # 13) Upload Allure Report as Artifact
@@ -184,7 +213,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: application-testing/target/site/allure-maven-plugin
+          path: application-testing/target/site/allure-report
 
       # ------------------------------
       # 14) Upload Flask logs (SUPER IMPORTANT)
@@ -204,7 +233,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: application-testing/target/site/allure-maven-plugin
+          publish_dir: application-testing/target/site/allure-report
           publish_branch: gh-pages
           force_orphan: true
 
@@ -236,17 +265,23 @@ jobs:
       - name: Make scripts executable
         run: chmod +x security-testing/*.sh
 
-      # 5) Run Gitleaks
+      # 5) Run Gitleaks (scan target-app)
       - name: Run Gitleaks
-        run: ./security-testing/run-gitleaks.sh
+        run: |
+          cd target-app
+          ../security-testing/run-gitleaks.sh
 
-      # 6) Run Semgrep
+      # 6) Run Semgrep (scan target-app)
       - name: Run Semgrep
-        run: ./security-testing/run-semgrep.sh
+        run: |
+          cd target-app
+          ../security-testing/run-semgrep.sh
 
-      # 7) Run Trivy
+      # 7) Run Trivy (scan target-app)
       - name: Run Trivy
-        run: ./security-testing/run-trivy.sh
+        run: |
+          cd target-app
+          ../security-testing/run-trivy.sh
 
       # 8) Upload Security Reports
       - name: Upload Security Reports
