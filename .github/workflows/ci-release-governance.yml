@@ -32,6 +32,9 @@ jobs:
           echo "===== Checking required folders ====="
           test -d application-testing || (echo "❌ application-testing folder missing" && exit 1)
           test -d security-testing || (echo "❌ security-testing folder missing" && exit 1)
+          test -d sbom-testing || (echo "❌ sbom-testing folder missing" && exit 1)
+          test -d kpqe-platform-testing || (echo "❌ kpqe-platform-testing folder missing" && exit 1)
+          test -d release-dashboard || (echo "❌ release-dashboard folder missing" && exit 1)
 
           echo "===== Checking required files ====="
           test -f application-testing/pom.xml || (echo "❌ application-testing/pom.xml missing" && exit 1)
@@ -146,7 +149,7 @@ jobs:
           cd application-testing
           mvn clean test -Dheadless=true
 
-      - name: Generate Allure Report (CLI Mode - No pom.xml plugin needed)
+      - name: Generate Allure Report (CLI Mode)
         if: always()
         run: |
           echo "===== Installing Allure CLI ====="
@@ -157,7 +160,6 @@ jobs:
 
           echo "===== Generating Allure Report ====="
           cd application-testing
-
           mkdir -p target/site/allure-report
           allure generate target/allure-results -o target/site/allure-report --clean
 
@@ -299,6 +301,22 @@ jobs:
         with:
           cluster_name: kpqe-cluster
 
+      # ✅ GUARANTEED FIX: kubeconfig set
+      - name: Set kubeconfig explicitly
+        run: |
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          kubectl config get-contexts
+          kubectl config current-context
+
+      # ✅ GUARANTEED FIX: wait for API ready
+      - name: Wait for Kubernetes API Ready
+        run: |
+          for i in {1..30}; do
+            kubectl get nodes && break
+            echo "Waiting for cluster..."
+            sleep 3
+          done
+
       - name: Verify Kubernetes Cluster
         run: |
           kubectl cluster-info
@@ -375,6 +393,11 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug - list artifacts folder
+        run: |
+          echo "===== ARTIFACTS ====="
+          ls -R artifacts || true
+
       - name: Prepare dashboard inputs
         run: |
           mkdir -p security-testing/reports
@@ -391,12 +414,18 @@ jobs:
           # SBOM
           cp -r artifacts/sbom-reports/* sbom-testing/reports/ || true
 
-          # KPQE
+          # KPQE (this artifact contains both txt + reports)
           cp -r artifacts/kpqe-platform-reports/* kpqe-platform-testing/ || true
 
       - name: Generate dashboard
         run: |
           python release-dashboard/generate-dashboard.py
+
+      - name: Debug - dashboard output
+        run: |
+          echo "===== DASHBOARD OUTPUT ====="
+          ls -la release-dashboard || true
+          ls -la release-dashboard/output || true
 
       - name: Upload Release Dashboard Artifact
         uses: actions/upload-artifact@v4
@@ -435,19 +464,24 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: release-dashboard
-          path: release-dashboard
+          path: release-dashboard-artifact
 
-      - name: Debug - check dashboard files
+      - name: Debug - check dashboard artifact files
         run: |
-          echo "===== release-dashboard ====="
-          ls -la release-dashboard
+          echo "===== release-dashboard-artifact ====="
+          ls -la release-dashboard-artifact || true
 
-      # ✅ IMPORTANT FIX
-      - name: Copy release-summary.json into decision engine folder
+      - name: Copy release-summary.json into decision engine input folder
         run: |
           mkdir -p release-decision/input
-          cp release-dashboard/release-summary.json release-decision/input/release-summary.json
-          echo "Copied release-summary.json successfully"
+
+          if [ ! -f "release-dashboard-artifact/release-summary.json" ]; then
+            echo "❌ release-summary.json missing from dashboard artifact"
+            exit 1
+          fi
+
+          cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
+          echo "✅ Copied release-summary.json successfully"
           ls -la release-decision/input
 
       - name: Run Final Release Decision Engine
@@ -460,4 +494,3 @@ jobs:
         with:
           name: final-release-decision
           path: release-decision/output/
-
