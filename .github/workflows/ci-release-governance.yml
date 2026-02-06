@@ -35,12 +35,15 @@ jobs:
           test -d sbom-testing || (echo "❌ sbom-testing folder missing" && exit 1)
           test -d kpqe-platform-testing || (echo "❌ kpqe-platform-testing folder missing" && exit 1)
           test -d release-dashboard || (echo "❌ release-dashboard folder missing" && exit 1)
+          test -d release-decision || (echo "❌ release-decision folder missing" && exit 1)
 
           echo "===== Checking required files ====="
           test -f application-testing/pom.xml || (echo "❌ application-testing/pom.xml missing" && exit 1)
           test -f security-testing/run-gitleaks.sh || (echo "❌ run-gitleaks.sh missing" && exit 1)
           test -f security-testing/run-semgrep.sh || (echo "❌ run-semgrep.sh missing" && exit 1)
           test -f security-testing/run-trivy.sh || (echo "❌ run-trivy.sh missing" && exit 1)
+          test -f release-dashboard/generate-dashboard.py || (echo "❌ release-dashboard/generate-dashboard.py missing" && exit 1)
+          test -f release-decision/final-decision.py || (echo "❌ release-decision/final-decision.py missing" && exit 1)
 
           echo "✅ Stage 1 validation passed"
 
@@ -78,16 +81,12 @@ jobs:
         run: |
           echo "===== Chrome Version ====="
           google-chrome --version || true
-
           echo "===== Chromedriver Version ====="
           chromedriver --version || true
-
           echo "===== Java Version ====="
           java -version || true
-
           echo "===== Maven Version ====="
           mvn -v || true
-
           echo "===== Python Version ====="
           python --version || true
 
@@ -106,7 +105,6 @@ jobs:
       - name: Start Flask App
         run: |
           cd target-app
-
           export FLASK_ENV=production
           export PYTHONUNBUFFERED=1
 
@@ -119,24 +117,18 @@ jobs:
           echo "===== Flask Log (After Start) ====="
           cat flask.log || true
 
-          echo "===== Running Python Processes ====="
-          ps aux | grep python || true
-
           echo "===== Ports Listening ====="
           ss -ltnp || true
 
       - name: Verify Flask App
         run: |
           echo "===== Checking Flask Health ====="
-
           for i in {1..40}; do
             echo "Checking Flask... attempt $i"
-
             if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9457 | grep -q "200"; then
               echo "✅ Flask is UP on port 9457"
               exit 0
             fi
-
             sleep 2
           done
 
@@ -208,10 +200,6 @@ jobs:
       - name: Clone Target Big Mart Repo
         run: |
           git clone https://github.com/asutosh-2000/Big-Mart-Sales-Prediction.git target-app
-          echo "===== Repo Root ====="
-          ls -la
-          echo "===== Target Repo ====="
-          ls -la target-app
 
       - name: Make scripts executable
         run: chmod +x security-testing/*.sh
@@ -249,10 +237,6 @@ jobs:
       - name: Clone Target Big Mart Repo
         run: |
           git clone https://github.com/asutosh-2000/Big-Mart-Sales-Prediction.git target-app
-          echo "===== Repo Root ====="
-          ls -la
-          echo "===== Target Repo ====="
-          ls -la target-app
 
       - name: Make SBOM scripts executable
         run: chmod +x sbom-testing/*.sh
@@ -301,14 +285,10 @@ jobs:
         with:
           cluster_name: kpqe-cluster
 
-      # ✅ GUARANTEED FIX: kubeconfig set
       - name: Set kubeconfig explicitly
         run: |
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
-          kubectl config get-contexts
-          kubectl config current-context
 
-      # ✅ GUARANTEED FIX: wait for API ready
       - name: Wait for Kubernetes API Ready
         run: |
           for i in {1..30}; do
@@ -350,14 +330,8 @@ jobs:
         if: always()
         run: |
           mkdir -p kpqe-platform-testing/reports
-
-          echo "Exporting nodes..."
           kubectl get nodes -o json > kpqe-platform-testing/reports/nodes.json
-
-          echo "Exporting pods..."
           kubectl get pods -A -o json > kpqe-platform-testing/reports/pods.json
-
-          echo "Exporting namespaces..."
           kubectl get ns -o json > kpqe-platform-testing/reports/namespaces.json
 
       - name: Upload KPQE Reports
@@ -388,15 +362,15 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install dashboard requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r release-dashboard/requirements.txt
+
       - name: Download all workflow artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Debug - list artifacts folder
-        run: |
-          echo "===== ARTIFACTS ====="
-          ls -R artifacts || true
 
       - name: Prepare dashboard inputs
         run: |
@@ -405,16 +379,9 @@ jobs:
           mkdir -p kpqe-platform-testing/reports
           mkdir -p application-testing/target/site/allure-report
 
-          # Allure
           cp -r artifacts/allure-report/* application-testing/target/site/allure-report/ || true
-
-          # Security
           cp -r artifacts/security-reports/* security-testing/reports/ || true
-
-          # SBOM
           cp -r artifacts/sbom-reports/* sbom-testing/reports/ || true
-
-          # KPQE (this artifact contains both txt + reports)
           cp -r artifacts/kpqe-platform-reports/* kpqe-platform-testing/ || true
 
       - name: Generate dashboard
@@ -424,21 +391,21 @@ jobs:
       - name: Debug - dashboard output
         run: |
           echo "===== DASHBOARD OUTPUT ====="
-          ls -la release-dashboard || true
-          ls -la release-dashboard/output || true
+          ls -R release-dashboard/output || true
 
+      # ✅ FIXED UPLOAD PATH (IMPORTANT)
       - name: Upload Release Dashboard Artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: release-dashboard
           path: |
-            release-dashboard/index.html
-            release-dashboard/release-summary.json
+            release-dashboard/output/index.html
+            release-dashboard/output/release-summary.json
 
 
   # ============================================================
-  #  LAYER 6 — Final Release Decision Engine (GO / HOLD / NO-GO)
+  #  LAYER 6 — Final Release Decision Engine
   # ============================================================
   final-release-decision:
     name: Layer 6 - Final Release Decision Engine
@@ -469,18 +436,22 @@ jobs:
       - name: Debug - check dashboard artifact files
         run: |
           echo "===== release-dashboard-artifact ====="
-          ls -la release-dashboard-artifact || true
+          ls -R release-dashboard-artifact || true
 
+      # ✅ FIXED PATH (IMPORTANT)
       - name: Copy release-summary.json into decision engine input folder
         run: |
           mkdir -p release-decision/input
 
-          if [ ! -f "release-dashboard-artifact/release-summary.json" ]; then
+          if [ ! -f "release-dashboard-artifact/release-summary.json" ] && [ -f "release-dashboard-artifact/output/release-summary.json" ]; then
+            cp release-dashboard-artifact/output/release-summary.json release-decision/input/release-summary.json
+          elif [ -f "release-dashboard-artifact/release-summary.json" ]; then
+            cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
+          else
             echo "❌ release-summary.json missing from dashboard artifact"
             exit 1
           fi
 
-          cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
           echo "✅ Copied release-summary.json successfully"
           ls -la release-decision/input
 
