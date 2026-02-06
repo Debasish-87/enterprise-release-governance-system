@@ -15,14 +15,48 @@ def safe_read_json(path):
     except Exception:
         return None
 
-def safe_read_text(path):
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except Exception:
-        return None
+def normalize_summary(summary: dict) -> dict:
+    """
+    Ensure the JSON always has:
+      summary["layers"]["layer1"]["status"]
+      summary["layers"]["layer2"]["semgrep"]["error"]
+      summary["layers"]["layer2"]["trivy"]["high/critical"]
+      summary["layers"]["layer3"]["grype"]["high/critical"]
+      summary["layers"]["layer4"]["kpqe_decision"]
+    """
+
+    if not isinstance(summary, dict):
+        summary = {}
+
+    if "layers" not in summary or not isinstance(summary.get("layers"), dict):
+        summary["layers"] = {}
+
+    layers = summary["layers"]
+
+    # Layer 1
+    layers.setdefault("layer1", {})
+    layers["layer1"].setdefault("status", "UNKNOWN")
+
+    # Layer 2
+    layers.setdefault("layer2", {})
+    layers["layer2"].setdefault("semgrep", {})
+    layers["layer2"]["semgrep"].setdefault("error", 0)
+
+    layers["layer2"].setdefault("trivy", {})
+    layers["layer2"]["trivy"].setdefault("high", 0)
+    layers["layer2"]["trivy"].setdefault("critical", 0)
+
+    # Layer 3
+    layers.setdefault("layer3", {})
+    layers["layer3"].setdefault("grype", {})
+    layers["layer3"]["grype"].setdefault("high", 0)
+    layers["layer3"]["grype"].setdefault("critical", 0)
+
+    # Layer 4
+    layers.setdefault("layer4", {})
+    layers["layer4"].setdefault("kpqe_decision", "UNKNOWN")
+
+    return summary
 
 def decision_rule(summary):
     """
@@ -70,18 +104,11 @@ def decision_rule(summary):
 # ----------------------------
 
 def main():
-    # ✅ FIX: Support multiple possible locations
+    # Input paths (from Layer 5 output)
     possible_paths = [
-        # Correct path (Layer 6 copies here)
         "release-decision/input/release-summary.json",
-
-        # Old path (if Layer 6 not updated)
         "release-dashboard/output/release-summary.json",
-
-        # If Layer 5 uploaded directly in root
         "release-dashboard/release-summary.json",
-
-        # If artifact extracted differently
         "release-dashboard-artifact/release-summary.json",
         "release-dashboard-artifact/output/release-summary.json",
     ]
@@ -102,7 +129,8 @@ def main():
             print(" -", p)
         exit(1)
 
-    summary = dashboard_json
+    # ✅ FIX: normalize structure (prevents KeyError: layers)
+    summary = normalize_summary(dashboard_json)
 
     final = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
