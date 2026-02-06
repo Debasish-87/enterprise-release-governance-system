@@ -70,13 +70,36 @@ def decision_rule(summary):
 # ----------------------------
 
 def main():
-    # Input paths (from Layer 5 output)
-    dashboard_json_path = "release-dashboard/output/release-summary.json"
+    # ✅ FIX: Support multiple possible locations
+    possible_paths = [
+        # Correct path (Layer 6 copies here)
+        "release-decision/input/release-summary.json",
 
-    dashboard_json = safe_read_json(dashboard_json_path)
+        # Old path (if Layer 6 not updated)
+        "release-dashboard/output/release-summary.json",
+
+        # If Layer 5 uploaded directly in root
+        "release-dashboard/release-summary.json",
+
+        # If artifact extracted differently
+        "release-dashboard-artifact/release-summary.json",
+        "release-dashboard-artifact/output/release-summary.json",
+    ]
+
+    dashboard_json = None
+    used_path = None
+
+    for p in possible_paths:
+        dashboard_json = safe_read_json(p)
+        if dashboard_json:
+            used_path = p
+            break
 
     if not dashboard_json:
         print("❌ ERROR: release-summary.json not found. Run Layer 5 first.")
+        print("===== Searched paths =====")
+        for p in possible_paths:
+            print(" -", p)
         exit(1)
 
     summary = dashboard_json
@@ -96,6 +119,7 @@ def main():
     final["final_decision"] = decision
 
     # Add reasoning
+    final["reasoning"].append(f"Input Path Used = {used_path}")
     final["reasoning"].append(f"Layer1 status = {summary['layers']['layer1']['status']}")
     final["reasoning"].append(f"Semgrep ERROR = {summary['layers']['layer2']['semgrep']['error']}")
     final["reasoning"].append(f"Trivy HIGH/CRITICAL = {summary['layers']['layer2']['trivy']['high']}/{summary['layers']['layer2']['trivy']['critical']}")

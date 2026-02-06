@@ -485,6 +485,8 @@ jobs:
   # ============================================================
   #  LAYER 6 — Final Release Decision Engine
   # ============================================================
+
+  
   final-release-decision:
     name: Layer 6 - Final Release Decision Engine
     runs-on: ubuntu-latest
@@ -516,7 +518,6 @@ jobs:
           echo "===== release-dashboard-artifact ====="
           ls -R release-dashboard-artifact || true
 
-      # ✅ GUARANTEED FIX: Copy release-summary.json correctly
       - name: Copy release-summary.json into decision engine input
         run: |
           mkdir -p release-decision/input
@@ -533,6 +534,12 @@ jobs:
 
           echo "✅ Copied release-summary.json successfully"
           ls -la release-decision/input
+
+      - name: Debug - check input file exists
+        run: |
+          echo "===== Checking input ====="
+          ls -R release-decision || true
+          cat release-decision/input/release-summary.json || true
 
       - name: Run Final Release Decision Engine
         run: |
