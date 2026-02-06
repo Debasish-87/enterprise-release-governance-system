@@ -379,7 +379,6 @@ jobs:
             kpqe-platform-testing/kpqe-release-decision.txt
             kpqe-platform-testing/reports/
 
-
   # ============================================================
   #  LAYER 5 — Release Dashboard
   # ============================================================
@@ -408,6 +407,11 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug - list artifacts
+        run: |
+          echo "===== ARTIFACTS DOWNLOADED ====="
+          ls -R artifacts || true
+
       - name: Prepare dashboard inputs
         run: |
           mkdir -p security-testing/reports
@@ -415,9 +419,16 @@ jobs:
           mkdir -p kpqe-platform-testing/reports
           mkdir -p application-testing/target/site/allure-report
 
+          # Allure
           cp -r artifacts/allure-report/* application-testing/target/site/allure-report/ || true
+
+          # Security
           cp -r artifacts/security-reports/* security-testing/reports/ || true
+
+          # SBOM
           cp -r artifacts/sbom-reports/* sbom-testing/reports/ || true
+
+          # KPQE
           cp -r artifacts/kpqe-platform-reports/* kpqe-platform-testing/ || true
 
       - name: Generate dashboard
@@ -427,16 +438,16 @@ jobs:
       - name: Debug - dashboard output
         run: |
           echo "===== DASHBOARD OUTPUT ====="
+          ls -R release-dashboard || true
           ls -R release-dashboard/output || true
 
+      # ✅ STRONG UPLOAD (upload full output folder)
       - name: Upload Release Dashboard Artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: release-dashboard
-          path: |
-            release-dashboard/output/index.html
-            release-dashboard/output/release-summary.json
+          path: release-dashboard/output/
 
 
   # ============================================================
@@ -462,27 +473,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-decision/requirements.txt
 
-      - name: Download Release Dashboard Artifact
+      # ✅ GUARANTEED FIX: download ALL artifacts (no name)
+      - name: Download all workflow artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-dashboard
-          path: release-dashboard-artifact
+          path: all-artifacts
 
-      - name: Debug - check dashboard artifact files
+      - name: Debug - list all artifacts
         run: |
-          echo "===== release-dashboard-artifact ====="
-          ls -R release-dashboard-artifact || true
+          echo "===== ALL ARTIFACTS ====="
+          ls -R all-artifacts || true
 
       - name: Copy release-summary.json into decision engine input folder
         run: |
           mkdir -p release-decision/input
 
-          if [ -f "release-dashboard-artifact/release-summary.json" ]; then
-            cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
-          elif [ -f "release-dashboard-artifact/output/release-summary.json" ]; then
-            cp release-dashboard-artifact/output/release-summary.json release-decision/input/release-summary.json
+          # Path 1 (most common)
+          if [ -f "all-artifacts/release-dashboard/release-summary.json" ]; then
+            cp all-artifacts/release-dashboard/release-summary.json release-decision/input/release-summary.json
+
+          # Path 2 (in case output folder exists inside artifact)
+          elif [ -f "all-artifacts/release-dashboard/output/release-summary.json" ]; then
+            cp all-artifacts/release-dashboard/output/release-summary.json release-decision/input/release-summary.json
+
           else
-            echo "❌ release-summary.json missing from dashboard artifact"
+            echo "❌ release-summary.json NOT FOUND in any artifact path"
+            echo "===== Searching file ====="
+            find all-artifacts -name "release-summary.json" || true
             exit 1
           fi
 
@@ -492,6 +509,13 @@ jobs:
       - name: Run Final Release Decision Engine
         run: |
           python release-decision/final-decision.py
+
+      - name: Debug - decision output
+        if: always()
+        run: |
+          echo "===== FINAL DECISION OUTPUT ====="
+          ls -R release-decision/output || true
+          cat release-decision/output/* || true
 
       - name: Upload Final Decision Artifact
         uses: actions/upload-artifact@v4
