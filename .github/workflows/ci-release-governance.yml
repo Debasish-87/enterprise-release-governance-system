@@ -470,17 +470,15 @@ jobs:
         with:
           name: release-dashboard
           path: release-dashboard/output/
-
   # ============================================================
-  #  LAYER 6 — Final Release Decision Engine
+  #  LAYER 6 — Final Release Decision Engine + GitHub Pages Deploy
   # ============================================================
 
-  
   final-release-decision:
-    name: Layer 6 - Final Release Decision Engine
+    name: Layer 6 - Final Release Decision Engine + Deploy Pages
     runs-on: ubuntu-latest
     needs: release-dashboard
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Governance Repo
@@ -496,6 +494,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-decision/requirements.txt
 
+      # ============================================================
+      # Download ONLY release-dashboard artifact for decision engine
+      # ============================================================
       - name: Download Release Dashboard Artifact
         uses: actions/download-artifact@v4
         with:
@@ -541,12 +542,55 @@ jobs:
           name: final-release-decision
           path: release-decision/output/
 
-      - name: Download ALL workflow artifacts
+      # ============================================================
+      # Download ONLY required artifacts for GitHub Pages site
+      # ============================================================
+
+      - name: Download Allure Report Artifact
         if: always()
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: allure-report
+          path: artifacts/allure-report
 
+      - name: Download Security Reports Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: security-reports
+          path: artifacts/security-reports
+
+      - name: Download SBOM Reports Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-reports
+          path: artifacts/sbom-reports
+
+      - name: Download KPQE Reports Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: kpqe-platform-reports
+          path: artifacts/kpqe-platform-reports
+
+      - name: Download Release Dashboard Artifact (for Pages)
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dashboard
+          path: artifacts/release-dashboard
+
+      - name: Download Final Release Decision Artifact (for Pages)
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: final-release-decision
+          path: artifacts/final-release-decision
+
+      # ============================================================
+      # Build GitHub Pages multi-report site
+      # ============================================================
       - name: Build GitHub Pages multi-report site
         if: always()
         run: |
@@ -632,6 +676,9 @@ jobs:
           echo "===== PUBLIC FOLDER READY ====="
           find public -maxdepth 3 -type f | head -n 200 || true
 
+      # ============================================================
+      # Deploy ALL reports to GitHub Pages
+      # ============================================================
       - name: Deploy ALL reports to GitHub Pages (gh-pages branch)
         if: always()
         uses: peaceiris/actions-gh-pages@v4
