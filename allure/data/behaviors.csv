@@ -1,0 +1,4 @@
+"Epic","Feature","Story","FAILED","BROKEN","PASSED","SKIPPED","UNKNOWN"
+"BSMP - Big Mart Sales Prediction","UI Tests","User should get sales prediction after submitting form","0","0","10","0","0"
+"","","","0","0","1","0","0"
+"BSMP - Big Mart Sales Prediction","UI Tests","Home page should load successfully","0","0","1","0","0"

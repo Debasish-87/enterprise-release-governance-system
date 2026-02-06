@@ -1,0 +1,73 @@
+{
+  "repo": "Debasish-87/enterprise-release-governance-system",
+  "commit": "40615e10652d1a09e1182cfe2d2a5939f0a796bd",
+  "run_id": "21769504094",
+  "run_link": "https://github.com/Debasish-87/enterprise-release-governance-system/actions/runs/21769504094",
+  "generated_at": "2026-02-06T23:29:34.419737Z",
+  "layers": {
+    "layer1": {
+      "status": "PASSED",
+      "allure_pages_url": "https://Debasish-87.github.io/enterprise-release-governance-system/allure/",
+      "total": 12,
+      "passed": 12,
+      "failed": 0,
+      "broken": 0,
+      "skipped": 0
+    },
+    "layer2": {
+      "gitleaks": {
+        "findings": 0,
+        "top_findings": []
+      },
+      "semgrep": {
+        "findings": 12,
+        "error": 11,
+        "warning": 1,
+        "info": 0,
+        "top_findings": [
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.",
+          "ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'."
+        ]
+      },
+      "trivy": {
+        "findings": 0,
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "top_vulnerabilities": []
+      }
+    },
+    "layer3": {
+      "sbom_components": 0,
+      "top_components": [],
+      "grype": {
+        "findings": 0,
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "unknown": 0,
+        "top_vulnerabilities": []
+      }
+    },
+    "layer4": {
+      "kpqe_decision": "RELEASE ALLOWED \u2705",
+      "nodes_total": 1,
+      "nodes_ready": 1,
+      "pods_total": 9,
+      "not_ready_nodes": [],
+      "crashloop_pods": [],
+      "restart_risk_pods": [],
+      "raw_kpqe_output": "RELEASE ALLOWED \u2705"
+    }
+  }
+}

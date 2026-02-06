@@ -1,0 +1,6 @@
+===== RELEASE DECISION SUMMARY =====
+verifyPredictionGenerated_MultipleCases → Risk: 3
+verifyHomePageLoads → Risk: 2
+-----------------------------------
+FINAL DECISION → GO
+===================================

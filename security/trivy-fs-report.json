@@ -1,0 +1,19 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.69.1"
+  },
+  "ReportID": "019c3548-159b-786c-aaec-f5698815ae93",
+  "CreatedAt": "2026-02-06T23:27:22.523553798Z",
+  "ArtifactID": "sha256:a56a253bd013fd74dc1b0286029b8336e29f481cabde3cccfc791ab62947f96b",
+  "ArtifactName": "target-app",
+  "ArtifactType": "repository",
+  "Metadata": {
+    "RepoURL": "https://github.com/asutosh-2000/Big-Mart-Sales-Prediction.git",
+    "Branch": "main",
+    "Commit": "62cb36f485fc6f83ed9bc1c57e96520c47ac2af6",
+    "CommitMsg": "Update app.py",
+    "Author": "Asutosh Mohanty \u003casutosh.m.2000@gmail.com\u003e",
+    "Committer": "GitHub \u003cnoreply@github.com\u003e"
+  }
+}

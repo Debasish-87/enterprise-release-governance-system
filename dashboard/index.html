@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Release Governance Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #0b1220;
+      color: white;
+    }
+    .card {
+      background: #111a2e;
+      padding: 18px;
+      border-radius: 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    h1 { color: #00ffcc; }
+    h2 { margin-bottom: 8px; }
+    a { color: #00ffcc; }
+    .ok { color: #3cff00; font-weight: bold; }
+    .bad { color: #ff4d4d; font-weight: bold; }
+    .warn { color: #ffcc00; font-weight: bold; }
+    code {
+      background: #0b1220;
+      padding: 3px 7px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    ul {
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🚀 Release Governance Dashboard (Layer 5)</h1>
+
+<div class="card">
+  <h2>📌 Run Info</h2>
+  <p><b>Repo:</b> Debasish-87/enterprise-release-governance-system</p>
+  <p><b>Commit:</b> <code>40615e10652d1a09e1182cfe2d2a5939f0a796bd</code></p>
+  <p><b>Run ID:</b> 21769504094</p>
+  <p><b>Run Link:</b> <a href="https://github.com/Debasish-87/enterprise-release-governance-system/actions/runs/21769504094" target="_blank">https://github.com/Debasish-87/enterprise-release-governance-system/actions/runs/21769504094</a></p>
+  <p><b>Generated:</b> 2026-02-06T23:29:34.419737Z</p>
+</div>
+
+<div class="card">
+  <h2>🧪 Layer 1 — Application Testing (Allure)</h2>
+  <p><b>Status:</b> <span class="ok">✅ PASSED</span></p>
+  <p><b>Total:</b> 12 | <b>Passed:</b> 12 | <b>Failed:</b> 0 | <b>Broken:</b> 0 | <b>Skipped:</b> 0</p>
+  <p><b>Allure Report:</b> <a href="https://Debasish-87.github.io/enterprise-release-governance-system/allure/" target="_blank">https://Debasish-87.github.io/enterprise-release-governance-system/allure/</a></p>
+</div>
+
+<div class="card">
+  <h2>🔐 Layer 2 — Security Scans</h2>
+
+  <div class="grid">
+    <div>
+      <h3>🕵️ Gitleaks</h3>
+      <p><b>Findings:</b> 0</p>
+      <h4>Top Findings</h4>
+      <p class='ok'>None ✅</p>
+    </div>
+
+    <div>
+      <h3>🧠 Semgrep</h3>
+      <p><b>Findings:</b> 12</p>
+      <p>
+        <b>ERROR:</b> 11 |
+        <b>WARNING:</b> 1 |
+        <b>INFO:</b> 0
+      </p>
+      <h4>Top Findings</h4>
+      <ul><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li><li><code>ERROR | python.flask.security.injection.nan-injection.nan-injection | target-app/app.py | Found user input going directly into typecast for bool(), float(), or complex(). This allows an attacker to inject Python's not-a-number (NaN) into the typecast. This results in undefind behavior, particularly when doing comparisons. Either cast to a different type, or add a guard checking for all capitalizations of the string 'nan'.</code></li></ul>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <h3>📦 Trivy</h3>
+    <p><b>Total Vulnerabilities:</b> 0</p>
+    <p>
+      <b>CRITICAL:</b> 0 |
+      <b>HIGH:</b> 0 |
+      <b>MEDIUM:</b> 0 |
+      <b>LOW:</b> 0
+    </p>
+    <h4>Top Vulnerabilities</h4>
+    <p class='ok'>None ✅</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>📦 Layer 3 — SBOM + SBOM Vulnerability Scan</h2>
+
+  <p><b>SBOM Components:</b> 0</p>
+  <h4>Top Components</h4>
+  <p class='ok'>None ✅</p>
+
+  <hr style="margin:18px 0; opacity:0.2;">
+
+  <p><b>Grype Findings:</b> 0</p>
+  <p>
+    <b>CRITICAL:</b> 0 |
+    <b>HIGH:</b> 0 |
+    <b>MEDIUM:</b> 0 |
+    <b>LOW:</b> 0 |
+    <b>UNKNOWN:</b> 0
+  </p>
+
+  <h4>Top Vulnerabilities</h4>
+  <p class='ok'>None ✅</p>
+</div>
+
+<div class="card">
+  <h2>☸ Layer 4 — KPQE Platform Quality</h2>
+
+  <p><b>Decision:</b> <span class="warn">RELEASE ALLOWED ✅</span></p>
+
+  <p><b>Nodes:</b> 1/1 Ready</p>
+  <p><b>Total Pods:</b> 9</p>
+
+  <h4>NotReady Nodes</h4>
+  <p class='ok'>None ✅</p>
+
+  <h4>CrashLoopBackOff Pods</h4>
+  <p class='ok'>None ✅</p>
+
+  <h4>Restart Risk Pods (restart > 3)</h4>
+  <p class='ok'>None ✅</p>
+
+  <h4>Raw KPQE Decision Output</h4>
+  <pre style="background:#0b1220;padding:12px;border-radius:10px;">RELEASE ALLOWED ✅</pre>
+</div>
+
+<div class="card">
+  <h2>🚦 Final Release Decision</h2>
+  <p style="font-size:20px;"><b>HOLD ⏸️</b></p>
+
+  <p>
+    <b>Dashboard:</b> <a href="https://Debasish-87.github.io/enterprise-release-governance-system/dashboard/" target="_blank">https://Debasish-87.github.io/enterprise-release-governance-system/dashboard/</a><br/>
+    <b>Security:</b> <a href="https://Debasish-87.github.io/enterprise-release-governance-system/security/" target="_blank">https://Debasish-87.github.io/enterprise-release-governance-system/security/</a><br/>
+    <b>SBOM:</b> <a href="https://Debasish-87.github.io/enterprise-release-governance-system/sbom/" target="_blank">https://Debasish-87.github.io/enterprise-release-governance-system/sbom/</a><br/>
+    <b>KPQE:</b> <a href="https://Debasish-87.github.io/enterprise-release-governance-system/kpqe/" target="_blank">https://Debasish-87.github.io/enterprise-release-governance-system/kpqe/</a><br/>
+    <b>Decision JSON:</b> <a href="https://Debasish-87.github.io/enterprise-release-governance-system/decision/" target="_blank">https://Debasish-87.github.io/enterprise-release-governance-system/decision/</a><br/>
+  </p>
+</div>
+
+</body>
+</html>

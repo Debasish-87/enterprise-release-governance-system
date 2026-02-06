@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-02-06T23:29:48.205971Z",
+  "repo": "Debasish-87/enterprise-release-governance-system",
+  "commit": "40615e10652d1a09e1182cfe2d2a5939f0a796bd",
+  "run_id": "21769504094",
+  "run_link": "https://github.com/Debasish-87/enterprise-release-governance-system/actions/runs/21769504094",
+  "final_decision": "HOLD",
+  "reasoning": [
+    "Input Path Used = release-decision/input/release-summary.json",
+    "Layer1 status = PASSED",
+    "Semgrep ERROR = 11",
+    "Trivy HIGH/CRITICAL = 0/0",
+    "Grype HIGH/CRITICAL = 0/0",
+    "KPQE Decision = RELEASE ALLOWED \u2705"
+  ]
+}
