@@ -419,3 +419,69 @@ with open("release-dashboard/index.html", "w", encoding="utf-8") as f:
     f.write(html)
 
 print("✅ Release dashboard generated: release-dashboard/index.html")
+
+
+# ============================================================
+# EXTRA: Generate release-summary.json (FOR LAYER 6)
+# ============================================================
+
+release_summary = {
+    "repo": repo,
+    "commit": sha,
+    "run_id": run_id,
+    "run_url": run_url,
+    "generated": generated_time,
+
+    "layer1_application_testing": {
+        "status": allure_status,
+        "total": allure_total,
+        "passed": allure_passed,
+        "failed": allure_failed,
+        "broken": allure_broken,
+        "skipped": allure_skipped,
+        "allure_pages_url": allure_pages_url
+    },
+
+    "layer2_security_scans": {
+        "gitleaks": {
+            "findings": gitleaks_findings,
+            "top_findings": gitleaks_top
+        },
+        "semgrep": {
+            "findings": semgrep_findings,
+            "severity": semgrep_sev,
+            "top_findings": semgrep_top
+        },
+        "trivy": {
+            "findings": trivy_findings,
+            "severity": trivy_sev,
+            "top_vulnerabilities": trivy_top
+        }
+    },
+
+    "layer3_sbom": {
+        "sbom_components": sbom_components,
+        "top_components": sbom_top,
+        "grype_findings": grype_findings,
+        "grype_severity": grype_sev,
+        "top_vulnerabilities": grype_top
+    },
+
+    "layer4_kpqe_platform": {
+        "decision": kpqe_decision,
+        "nodes_total": total_nodes,
+        "nodes_ready": ready_nodes,
+        "pods_total": total_pods,
+        "not_ready_nodes": not_ready_nodes,
+        "crashloop_pods": crashloop_pods,
+        "restart_risk_pods": restart_risk_pods,
+        "raw_kpqe_output": kpqe_text
+    },
+
+    "final_release_decision": final_decision
+}
+
+with open("release-dashboard/release-summary.json", "w", encoding="utf-8") as f:
+    json.dump(release_summary, f, indent=2)
+
+print("✅ Release summary JSON generated: release-dashboard/release-summary.json")

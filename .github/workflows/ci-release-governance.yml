@@ -13,7 +13,7 @@ permissions:
 jobs:
 
 
-  
+
   # ============================================================
   #  LAYER 1 — Application Testing + Allure Report
   # ============================================================
@@ -384,8 +384,7 @@ jobs:
             kpqe-platform-testing/kpqe-release-decision.txt
             kpqe-platform-testing/reports/
 
-
-
+            
   # ============================================================
   #  LAYER 5 — Release Dashboard
   # ============================================================
@@ -414,6 +413,11 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug - list downloaded artifacts
+        run: |
+          echo "===== ARTIFACTS DOWNLOADED ====="
+          ls -R artifacts || true
+
       - name: Prepare dashboard inputs
         run: |
           mkdir -p security-testing/reports
@@ -426,44 +430,48 @@ jobs:
           cp -r artifacts/sbom-reports/* sbom-testing/reports/ || true
           cp -r artifacts/kpqe-platform-reports/* kpqe-platform-testing/ || true
 
+          echo "===== INPUTS READY ====="
+          ls -la security-testing/reports || true
+          ls -la sbom-testing/reports || true
+          ls -la kpqe-platform-testing/reports || true
+          ls -la application-testing/target/site/allure-report || true
+
       - name: Generate dashboard
         run: |
           python release-dashboard/generate-dashboard.py
 
-      # ✅ GUARANTEED FIX: Ensure output folder + ensure release-summary.json exists
-      - name: Normalize dashboard output
+      # ✅ GUARANTEED FIX: Normalize output folder
+      - name: Normalize dashboard output (GUARANTEED)
         run: |
           mkdir -p release-dashboard/output
 
           echo "===== Searching for dashboard files ====="
           find release-dashboard -maxdepth 3 -type f || true
 
-          # If script created index.html in root
+          # Copy index.html (root -> output)
           if [ -f "release-dashboard/index.html" ]; then
             cp release-dashboard/index.html release-dashboard/output/index.html
+            echo "✅ Copied index.html -> output/"
           fi
 
-          # If script created release-summary.json in root
+          # Copy release-summary.json (root -> output)
           if [ -f "release-dashboard/release-summary.json" ]; then
             cp release-dashboard/release-summary.json release-dashboard/output/release-summary.json
+            echo "✅ Copied release-summary.json -> output/"
           fi
 
-          # If already created inside output
-          if [ -f "release-dashboard/output/release-summary.json" ]; then
-            echo "✅ release-summary.json exists inside output"
-          else
-            echo "❌ release-summary.json STILL missing"
+          # Final check
+          if [ ! -f "release-dashboard/output/index.html" ]; then
+            echo "❌ index.html missing in output/"
             exit 1
           fi
 
-          if [ -f "release-dashboard/output/index.html" ]; then
-            echo "✅ index.html exists inside output"
-          else
-            echo "❌ index.html missing"
+          if [ ! -f "release-dashboard/output/release-summary.json" ]; then
+            echo "❌ release-summary.json missing in output/"
             exit 1
           fi
 
-          echo "===== FINAL OUTPUT ====="
+          echo "===== FINAL OUTPUT READY ====="
           ls -la release-dashboard/output
 
       - name: Upload Release Dashboard Artifact
@@ -472,7 +480,6 @@ jobs:
         with:
           name: release-dashboard
           path: release-dashboard/output/
-
 
 
 
