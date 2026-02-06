@@ -1,0 +1,422 @@
+﻿===== FILE: D:\kubernetes-platform-quality-engineering\k8s\kpqe-metrics.yaml =====
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kpqe-metrics
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kpqe-metrics
+  template:
+    metadata:
+      labels:
+        app: kpqe-metrics
+    spec:
+      serviceAccountName: kpqe-sa
+      containers:
+      - name: kpqe-metrics
+        image: kpqe-metrics:1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kpqe-metrics
+  namespace: observability
+spec:
+  selector:
+    app: kpqe-metrics
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\k8s\kpqe-rbac.yaml =====
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kpqe-sa
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kpqe-readonly
+rules:
+- apiGroups: [""]
+  resources:
+    - pods
+    - nodes
+    - namespaces
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kpqe-readonly-binding
+subjects:
+- kind: ServiceAccount
+  name: kpqe-sa
+  namespace: observability
+roleRef:
+  kind: ClusterRole
+  name: kpqe-readonly
+  apiGroup: rbac.authorization.k8s.io
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\metrics\kpqe_metrics.py =====
+from prometheus_client import start_http_server, Gauge
+from kubernetes import client, config
+import time
+
+# =====================
+# Metrics Definitions
+# =====================
+
+cluster_ready = Gauge(
+    "kpqe_cluster_ready",
+    "Kubernetes cluster reachability (1 = ready, 0 = not ready)"
+)
+
+crashloop_pods = Gauge(
+    "kpqe_crashloop_pods",
+    "Number of pods in CrashLoopBackOff"
+)
+
+restart_risk = Gauge(
+    "kpqe_restart_risk",
+    "Pods with restart count > threshold"
+)
+
+release_allowed = Gauge(
+    "kpqe_release_allowed",
+    "Release decision (1 = allowed, 0 = blocked)"
+)
+
+# =====================
+# Kubernetes Config Loader
+# =====================
+
+def load_k8s_config():
+    """
+    Loads Kubernetes config based on execution environment
+    - In-cluster â†’ ServiceAccount
+    - Local â†’ kubeconfig
+    """
+    try:
+        config.load_incluster_config()
+        print("Loaded in-cluster Kubernetes config")
+    except Exception:
+        config.load_kube_config()
+        print("Loaded local kubeconfig")
+
+# =====================
+# Platform Evaluation
+# =====================
+
+def evaluate_platform():
+    load_k8s_config()
+    v1 = client.CoreV1Api()
+
+    # ---- Cluster Check ----
+    try:
+        nodes = v1.list_node()
+        cluster_ready.set(1 if nodes.items else 0)
+    except Exception as e:
+        cluster_ready.set(0)
+        print(f"Cluster check failed: {e}")
+
+    # ---- Pod Health Checks ----
+    crash_count = 0
+    restart_count = 0
+
+    pods = v1.list_pod_for_all_namespaces().items
+
+    for pod in pods:
+        for cs in pod.status.container_statuses or []:
+            if cs.state and cs.state.waiting and cs.state.waiting.reason == "CrashLoopBackOff":
+                crash_count += 1
+
+            if cs.restart_count > 3:
+                restart_count += 1
+
+    crashloop_pods.set(crash_count)
+    restart_risk.set(restart_count)
+
+    # ---- Release Gate Decision ----
+    if cluster_ready._value.get() == 1 and crash_count == 0:
+        release_allowed.set(1)
+    else:
+        release_allowed.set(0)
+
+# =====================
+# Metrics Server
+# =====================
+
+def run():
+    start_http_server(8000)
+    print("KPQE Metrics running on :8000/metrics")
+
+    while True:
+        evaluate_platform()
+        time.sleep(15)
+
+if __name__ == "__main__":
+    run()
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\observability\grafana.yaml =====
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana
+        ports:
+          - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      nodePort: 32000
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\observability\prometheus.yaml =====
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+
+      # -------------------------
+      # KPQE Platform Quality Metrics
+      # -------------------------
+      - job_name: "kpqe-platform-quality"
+        static_configs:
+          - targets:
+              - kpqe-metrics.observability.svc.cluster.local:8000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.52.0
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"
+        ports:
+          - containerPort: 9090
+        volumeMounts:
+          - name: config
+            mountPath: /etc/prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\platform-tests\cluster\test_cluster_health.py =====
+from kubernetes import client, config
+
+def test_cluster_reachable():
+    """
+    Platform Quality Rule:
+    Kubernetes cluster must be reachable
+    """
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    nodes = v1.list_node()
+    assert len(nodes.items) > 0, "No nodes found in cluster"
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\platform-tests\cluster\test_node_readiness.py =====
+from kubernetes import client, config
+
+def test_all_nodes_ready():
+    """
+    Platform Quality Rule:
+    All nodes must be in Ready state
+    """
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    nodes = v1.list_node().items
+
+    not_ready = []
+    for node in nodes:
+        for condition in node.status.conditions:
+            if condition.type == "Ready" and condition.status != "True":
+                not_ready.append(node.metadata.name)
+
+    assert not not_ready, f"NotReady nodes found: {not_ready}"
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\platform-tests\workloads\test_pod_crashloop.py =====
+from kubernetes import client, config
+
+def test_no_pods_in_crashloop():
+    """
+    Platform Quality Rule:
+    No pod should be in CrashLoopBackOff
+    """
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+
+    bad_pods = []
+
+    pods = v1.list_pod_for_all_namespaces().items
+    for pod in pods:
+        statuses = pod.status.container_statuses or []
+        for status in statuses:
+            state = status.state
+            if state.waiting and state.waiting.reason == "CrashLoopBackOff":
+                bad_pods.append(f"{pod.metadata.namespace}/{pod.metadata.name}")
+
+    assert not bad_pods, f"CrashLoopBackOff pods found: {bad_pods}"
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\platform-tests\workloads\test_pod_restart_risk.py =====
+from kubernetes import client, config
+
+RESTART_THRESHOLD = 3
+
+def test_pod_restart_threshold():
+    """
+    Platform Quality Rule:
+    Excessive pod restarts indicate instability
+    """
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+
+    risky_pods = []
+
+    pods = v1.list_pod_for_all_namespaces().items
+    for pod in pods:
+        statuses = pod.status.container_statuses or []
+        for status in statuses:
+            if status.restart_count > RESTART_THRESHOLD:
+                risky_pods.append(
+                    f"{pod.metadata.namespace}/{pod.metadata.name} "
+                    f"(restarts={status.restart_count})"
+                )
+
+    assert not risky_pods, f"Pods with high restart count: {risky_pods}"
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\quality_gates\evaluate_platform.py =====
+from kubernetes import client, config
+from .release_gate import ReleaseDecision
+
+
+RESTART_THRESHOLD = 3
+
+def evaluate_platform():
+    decision = ReleaseDecision()
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+
+    # Node readiness
+    for node in v1.list_node().items:
+        for condition in node.status.conditions:
+            if condition.type == "Ready" and condition.status != "True":
+                decision.record_issue(f"Node not ready: {node.metadata.name}")
+
+    # Pod health & restarts
+    pods = v1.list_pod_for_all_namespaces().items
+    for pod in pods:
+        statuses = pod.status.container_statuses or []
+        for status in statuses:
+            if status.state.waiting and status.state.waiting.reason == "CrashLoopBackOff":
+                decision.record_issue(
+                    f"CrashLoop pod: {pod.metadata.namespace}/{pod.metadata.name}"
+                )
+            if status.restart_count > RESTART_THRESHOLD:
+                decision.record_issue(
+                    f"High restart pod: {pod.metadata.namespace}/{pod.metadata.name}"
+                )
+
+    return decision
+
+
+if __name__ == "__main__":
+    decision = evaluate_platform()
+    print(decision.summary())
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\quality_gates\release_gate.py =====
+class ReleaseDecision:
+    def __init__(self):
+        self.issues = []
+
+    def record_issue(self, issue):
+        self.issues.append(issue)
+
+    def is_release_allowed(self):
+        return len(self.issues) == 0
+
+    def summary(self):
+        if self.is_release_allowed():
+            return "RELEASE ALLOWED âœ…"
+        return f"RELEASE BLOCKED âŒ â€” Issues: {self.issues}"
+
+
+===== FILE: D:\kubernetes-platform-quality-engineering\quality_gates\__init__.py =====
+
+

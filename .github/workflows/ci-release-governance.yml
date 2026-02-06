@@ -326,3 +326,104 @@ jobs:
         with:
           name: sbom-reports
           path: sbom-testing/reports/
+
+
+
+  # ============================================================
+  # ✅ STAGE 4 — Kubernetes Readiness + KPQE Platform Testing
+  # ============================================================
+  kpqe-platform-testing:
+    name: Stage 4 - Kubernetes Readiness + KPQE
+    runs-on: ubuntu-latest
+    needs: security-testing
+    timeout-minutes: 20
+
+    steps:
+      # ------------------------------
+      # 1) Checkout Repo
+      # ------------------------------
+      - name: Checkout Governance Repo
+        uses: actions/checkout@v4
+
+      # ------------------------------
+      # 2) Setup Python
+      # ------------------------------
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ------------------------------
+      # 3) Install kubectl
+      # ------------------------------
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
+      # ------------------------------
+      # 4) Setup KIND Cluster
+      # ------------------------------
+      - name: Setup KIND cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: kpqe-cluster
+
+      # ------------------------------
+      # 5) Verify Cluster
+      # ------------------------------
+      - name: Verify Kubernetes Cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes -o wide
+          kubectl get namespaces
+
+      # ------------------------------
+      # 6) Install KPQE dependencies
+      # ------------------------------
+      - name: Install KPQE Python requirements
+        run: |
+          cd kpqe-platform-testing
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ------------------------------
+      # 7) Apply Namespace + RBAC
+      # ------------------------------
+      - name: Apply KPQE Namespace + RBAC
+        run: |
+          kubectl apply -f kpqe-platform-testing/k8s/namespace.yaml
+          kubectl apply -f kpqe-platform-testing/k8s/kpqe-rbac.yaml
+
+      # ------------------------------
+      # 8) Run KPQE Platform Tests (pytest)
+      # ------------------------------
+      - name: Run KPQE Platform Tests
+        run: |
+          cd kpqe-platform-testing
+          pytest -q platform-tests --disable-warnings --maxfail=1
+
+      # ------------------------------
+      # 9) Run Release Gate Decision Engine
+      # ------------------------------
+      - name: Evaluate KPQE Quality Gate
+        run: |
+          cd kpqe-platform-testing
+          python -m quality_gates.evaluate_platform > kpqe-release-decision.txt
+          cat kpqe-release-decision.txt
+
+      # ------------------------------
+      # 10) Upload KPQE Reports
+      # ------------------------------
+      - name: Upload KPQE Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kpqe-platform-reports
+          path: |
+            kpqe-platform-testing/kpqe-release-decision.txt
+
+
+            
