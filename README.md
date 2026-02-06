@@ -1,11 +1,11 @@
 # Intelligent Release Governance System (IRGS)
 
-IRGS is an **enterprise-style DevSecOps + Quality Engineering Release Governance Platform** built using **GitHub Actions**.
+IRGS is an **enterprise-style Release Governance Platform** built using **GitHub Actions**.
 
 It automates:
 
 - Automated Testing + Allure Reports  
-- Security Scans (Gitleaks, Semgrep, Trivy)  
+- DevSecOps Security Scans (Gitleaks, Semgrep, Trivy)  
 - SBOM Generation (Syft) + SBOM Vulnerability Scan (Grype)  
 - Kubernetes Platform Quality Engineering (KPQE)  
 - Single Consolidated Release Dashboard  
@@ -14,102 +14,107 @@ It automates:
 
 ---
 
-## Live Reports (GitHub Pages)
+## Live Reports Portal (GitHub Pages)
 
-Once the pipeline runs successfully, reports are available here:
+All pipeline outputs are deployed automatically to GitHub Pages.
 
-- Main Portal (Root)  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/`
+### Main Portal
+- [IRGS Reports Portal](https://debasish-87.github.io/Intelligent-Release-Governance-System/)
 
-- Allure Report  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/allure/`
+### Reports Navigation
 
-- Security Reports  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/security/`
+| Report Type | Live Link |
+|-----------|----------|
+| Release Dashboard | [Open Dashboard](https://debasish-87.github.io/Intelligent-Release-Governance-System/dashboard/) |
+| Allure Test Report | [Open Allure Report](https://debasish-87.github.io/Intelligent-Release-Governance-System/allure/) |
+| Security Reports | [Open Security Reports](https://debasish-87.github.io/Intelligent-Release-Governance-System/security/) |
+| SBOM Reports | [Open SBOM Reports](https://debasish-87.github.io/Intelligent-Release-Governance-System/sbom/) |
+| KPQE Platform Reports | [Open KPQE Reports](https://debasish-87.github.io/Intelligent-Release-Governance-System/kpqe/) |
+| Final Decision Output | [Open Final Decision](https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/) |
+| Final Decision JSON | [final-decision.json](https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/final-decision.json) |
 
-- SBOM Reports  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/sbom/`
+---
 
-- KPQE Platform Reports  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/kpqe/`
+## Live Proof (Latest Successful Run Example)
 
-- Release Dashboard  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/dashboard/`
+Example successful run:
 
-- Final Decision Output  
-  `https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/`
+- Repo: `Debasish-87/Intelligent-Release-Governance-System`
+- Commit: `d6c797c89d6a6964b27e1f01dc2ae2f67762ac59`
+- GitHub Actions Run:  
+  [Open Run #21768128714](https://github.com/Debasish-87/Intelligent-Release-Governance-System/actions/runs/21768128714)
 
 ---
 
 ## Why IRGS?
 
-Modern software releases require more than just "tests passed".
+Modern releases require more than only “tests passed”.
 
-IRGS combines **testing + security + platform readiness** into one single pipeline and produces a final release decision:
+IRGS enforces governance using **multi-layer validation** and generates a final decision:
 
-- GO → Safe to release  
-- HOLD → Needs manual review  
-- NO-GO → Block release  
+- **GO** → safe to release  
+- **HOLD** → manual review required  
+- **NO-GO** → release blocked  
 
 ---
 
 ## Release Governance Pipeline (Layer-wise)
 
-### Layer 1 — Application Testing + Allure
+### Layer 1 — Application Testing (Allure)
 Runs automated UI/API test suite and generates Allure reports.
 
 **Outputs**
-- Allure Report (HTML)
-- Test results
-- Risk scoring / intelligence summary
+- Allure HTML report
+- Test execution summary
+- Testing intelligence summary (risk scoring)
 
 ---
 
 ### Layer 2 — Security Scans (DevSecOps)
-Performs security checks using:
+Runs enterprise security scans:
 
-- Gitleaks → Secrets scanning  
-- Semgrep → SAST scanning  
-- Trivy FS → Repo vulnerability scan  
+- **Gitleaks** → Secrets detection  
+- **Semgrep** → SAST scanning  
+- **Trivy FS** → Repository vulnerability scanning  
 
 **Outputs**
 - `semgrep-report.json`
 - `trivy-fs-report.json`
-- `gitleaks-report.json` (if enabled)
+- `gitleaks-report.json` (optional)
 
 ---
 
 ### Layer 3 — SBOM + SBOM Vulnerability Scan
 Generates SBOM and scans dependencies.
 
-- Syft → generates SBOM (CycloneDX JSON)
-- Grype → scans SBOM for vulnerabilities
+- **Syft** → generates SBOM (CycloneDX JSON)  
+- **Grype** → scans SBOM for vulnerabilities  
 
 **Outputs**
 - `sbom-cyclonedx.json`
-- `sbom-vuln-report.json`
+- `grype-sbom-report.json`
 
 ---
 
 ### Layer 4 — KPQE Platform Testing (Kubernetes)
-Runs Kubernetes platform readiness + quality checks:
+Runs Kubernetes platform readiness + quality validation:
 
-- Node readiness
-- Pod crashloops
-- Restart risk detection
-- Cluster health checks
+- Node readiness checks  
+- Pod crashloop detection  
+- Restart risk checks  
+- Cluster health validation  
 
 **Outputs**
 - `kpqe-release-decision.txt`
-- KPQE raw reports folder
+- Cluster readiness reports (`nodes.json`, `pods.json`)
 
 ---
 
-### Layer 5 — Single Consolidated Release Dashboard
+### Layer 5 — Consolidated Release Dashboard
 A Python dashboard generator merges all signals into:
 
-- One HTML dashboard
-- One JSON summary
+- One HTML dashboard  
+- One JSON summary  
 
 **Outputs**
 - `index.html`
@@ -117,12 +122,12 @@ A Python dashboard generator merges all signals into:
 
 ---
 
-### Layer 6 — Final Release Decision Engine + GitHub Pages Deploy
-Final decision engine reads the Layer 5 summary and generates:
+### Layer 6 — Final Decision Engine + GitHub Pages Deployment
+Reads Layer 5 summary and generates:
 
 - `final-decision.json`
 
-Then it deploys everything to GitHub Pages under folders:
+Then deploys all reports into GitHub Pages:
 
 - `/allure/`
 - `/security/`
@@ -135,48 +140,58 @@ Then it deploys everything to GitHub Pages under folders:
 
 ## Final Decision Logic
 
-IRGS produces final release decision based on combined signals:
+IRGS generates the final decision using combined governance rules.
 
 ### GO
-- All tests passed
-- No High/Critical vulnerabilities
-- KPQE decision = RELEASE ALLOWED
+- Layer 1 tests passed  
+- No High/Critical vulnerabilities in Trivy or Grype  
+- KPQE decision = RELEASE ALLOWED  
 
 ### HOLD
-- Tests passed but security warnings/errors exist  
-  Example: Semgrep errors/warnings found
+- Tests passed but security issues exist  
+  Example: Semgrep ERROR findings > 0  
 
 ### NO-GO
-- Critical vulnerabilities found  
-- KPQE fails  
-- Release gates violated
+- Tests failed  
+- Trivy High/Critical vulnerabilities found  
+- Grype High/Critical vulnerabilities found  
+- KPQE decision = RELEASE BLOCKED  
+
+---
+
+## Example Final Decision Output (Live JSON)
+
+Final decision JSON is published here:
+
+- [final-decision.json](https://debasish-87.github.io/Intelligent-Release-Governance-System/decision/final-decision.json)
 
 ---
 
 ## Reports Generated
 
 ### Testing
-- Allure HTML report
-- Test execution summary
+- Allure HTML report  
+- Test execution summary  
 
 ### Security
-- Semgrep JSON
-- Trivy JSON
-- Gitleaks JSON (optional)
+- Semgrep report (JSON)  
+- Trivy FS report (JSON)  
+- Gitleaks report (JSON)  
 
 ### SBOM
-- CycloneDX SBOM JSON
-- SBOM vulnerability scan JSON
+- CycloneDX SBOM JSON  
+- Grype SBOM vulnerability report JSON  
 
 ### Platform Quality (KPQE)
-- Node readiness report
-- Crashloop detection
-- Restart risk checks
+- Node readiness  
+- Crashloop detection  
+- Restart risk checks  
+- KPQE release decision  
 
-### Consolidated Outputs
-- Release dashboard (HTML)
-- Release summary JSON
-- Final decision JSON
+### Consolidated Governance Outputs
+- Release dashboard HTML  
+- Release summary JSON  
+- Final decision JSON  
 
 ---
 
@@ -239,16 +254,16 @@ Intelligent-Release-Governance-System/
 
 ---
 
-## How to Run Locally (Optional)
+## Running Locally (Optional)
 
-### 1) Run Application Testing (Layer 1)
+### Application Testing (Layer 1)
 
 ```bash
 cd application-testing
 mvn clean test
 ```
 
-### 2) Run Security Scans (Layer 2)
+### Security Scans (Layer 2)
 
 ```bash
 cd security-testing
@@ -256,7 +271,7 @@ bash run-semgrep.sh
 bash run-trivy.sh
 ```
 
-### 3) Generate SBOM (Layer 3)
+### SBOM Generation + Scan (Layer 3)
 
 ```bash
 cd sbom-testing
@@ -264,7 +279,7 @@ bash generate-sbom.sh
 bash scan-sbom.sh
 ```
 
-### 4) Run KPQE Platform Testing (Layer 4)
+### KPQE Platform Testing (Layer 4)
 
 ```bash
 cd kpqe-platform-testing
@@ -276,27 +291,27 @@ pytest -q
 
 ## GitHub Actions Workflow
 
-Main pipeline file:
+Main workflow file:
 
-`.github/workflows/ci-release-governance.yml`
+* `.github/workflows/ci-release-governance.yml`
 
-It produces:
+This workflow produces:
 
 * GitHub Actions artifacts
-* GitHub Pages reports
-* Final Release Decision
+* GitHub Pages multi-report portal
+* Automated final release decision
 
 ---
 
 ## Project Summary (Resume Ready)
 
-Built an end-to-end Release Governance Platform that generates Allure reports, performs DevSecOps security scanning, creates SBOMs, scans SBOM vulnerabilities, validates Kubernetes readiness using KPQE, and enforces automated GO / HOLD / NO-GO release decisions using a consolidated dashboard deployed to GitHub Pages.
+Built an enterprise-grade Release Governance Platform that generates Allure reports, performs DevSecOps security scanning, creates SBOMs, scans SBOM vulnerabilities, validates Kubernetes readiness using KPQE, and enforces automated GO / HOLD / NO-GO release decisions using a consolidated dashboard deployed to GitHub Pages.
 
 ---
 
 ## Author
 
 Debasish-87
-GitHub: `https://github.com/Debasish-87`
+GitHub: [https://github.com/Debasish-87](https://github.com/Debasish-87)
 
 ```
