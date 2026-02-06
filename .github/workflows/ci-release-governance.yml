@@ -13,7 +13,7 @@ permissions:
 jobs:
 
   # ============================================================
-  # ✅ LAYER 1 — Application Testing + Allure Report
+  #  LAYER 1 — Application Testing + Allure Report
   # ============================================================
   application-testing:
     name: Layer 1 - Application Testing + Allure
@@ -186,7 +186,7 @@ jobs:
 
 
   # ============================================================
-  # ✅ LAYER 2 — Security Testing
+  #  LAYER 2 — Security Testing
   # ============================================================
   security-testing:
     name: Layer 2 - Security Testing (Gitleaks + Semgrep + Trivy)
@@ -232,7 +232,7 @@ jobs:
 
 
   # ============================================================
-  # ✅ LAYER 3 — SBOM
+  #  LAYER 3 — SBOM
   # ============================================================
   sbom-testing:
     name: Layer 3 - SBOM Generation + SBOM Vulnerability Scan
@@ -270,7 +270,7 @@ jobs:
 
 
   # ============================================================
-  # ✅ LAYER 4 — KPQE Platform Testing (KIND + pytest)
+  #  LAYER 4 — KPQE Platform Testing (KIND + pytest)
   # ============================================================
   kpqe-platform-testing:
     name: Layer 4 - Kubernetes Readiness + KPQE Platform Testing
@@ -328,7 +328,7 @@ jobs:
           python -m quality_gates.evaluate_platform > kpqe-release-decision.txt
           cat kpqe-release-decision.txt
 
-      # ✅ EXTRA: Export cluster health JSON for dashboard
+      #  EXTRA: Export cluster health JSON for dashboard
       - name: Export Cluster + Pod Health (JSON)
         if: always()
         run: |
@@ -354,7 +354,7 @@ jobs:
 
 
   # ============================================================
-  # ✅ LAYER 5 — Release Dashboard
+  #  LAYER 5 — Release Dashboard
   # ============================================================
   release-dashboard:
     name: Layer 5 - Single Consolidated Release Dashboard
@@ -371,13 +371,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      # ✅ Download all artifacts from previous layers
+      #  Download all artifacts from previous layers
       - name: Download all workflow artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      # ✅ Copy artifacts into expected folders (so dashboard script can read)
+      #  Copy artifacts into expected folders (so dashboard script can read)
       - name: Prepare dashboard inputs
         run: |
           mkdir -p security-testing/reports
@@ -407,3 +407,41 @@ jobs:
         with:
           name: release-dashboard
           path: release-dashboard/index.html
+
+
+  # ============================================================
+  #  LAYER 6 — Final Release Decision Engine (GO / HOLD / NO-GO)
+  # ============================================================
+  final-release-decision:
+    name: Layer 6 - Final Release Decision Engine
+    runs-on: ubuntu-latest
+    needs: release-dashboard
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Governance Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install decision engine requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r release-decision/requirements.txt
+
+      - name: Run Final Release Decision Engine
+        run: |
+          python release-decision/final-decision.py
+
+      - name: Upload Final Decision Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-release-decision
+          path: release-decision/output/
+
+
+          
