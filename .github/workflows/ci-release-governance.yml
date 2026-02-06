@@ -328,7 +328,6 @@ jobs:
           python -m quality_gates.evaluate_platform > kpqe-release-decision.txt
           cat kpqe-release-decision.txt
 
-      #  EXTRA: Export cluster health JSON for dashboard
       - name: Export Cluster + Pod Health (JSON)
         if: always()
         run: |
@@ -371,13 +370,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      #  Download all artifacts from previous layers
       - name: Download all workflow artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      #  Copy artifacts into expected folders (so dashboard script can read)
       - name: Prepare dashboard inputs
         run: |
           mkdir -p security-testing/reports
@@ -406,7 +403,9 @@ jobs:
         if: always()
         with:
           name: release-dashboard
-          path: release-dashboard/index.html
+          path: |
+            release-dashboard/index.html
+            release-dashboard/release-summary.json
 
 
   # ============================================================
@@ -432,6 +431,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-decision/requirements.txt
 
+      # ✅ FIX: Download Layer 5 output
+      - name: Download Release Dashboard Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dashboard
+          path: release-dashboard
+
+      - name: Debug - check dashboard files
+        run: |
+          echo "===== release-dashboard ====="
+          ls -la release-dashboard
+
       - name: Run Final Release Decision Engine
         run: |
           python release-decision/final-decision.py
@@ -442,6 +453,3 @@ jobs:
         with:
           name: final-release-decision
           path: release-decision/output/
-
-
-          
