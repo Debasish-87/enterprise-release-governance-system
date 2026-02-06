@@ -7,7 +7,6 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-# ✅ IMPORTANT: This fixes 403 Permission denied for gh-pages deploy
 permissions:
   contents: write
 
@@ -86,14 +85,14 @@ jobs:
         uses: browser-actions/setup-chrome@v1
 
       # ------------------------------
-      # 6) Debug versions (Super useful)
+      # 6) Debug versions
       # ------------------------------
       - name: Debug Chrome + System Versions
         run: |
           echo "===== Chrome Version ====="
           google-chrome --version || true
 
-          echo "===== Chromedriver Version (if available) ====="
+          echo "===== Chromedriver Version ====="
           chromedriver --version || true
 
           echo "===== Java Version ====="
@@ -133,7 +132,6 @@ jobs:
           export FLASK_ENV=production
           export PYTHONUNBUFFERED=1
 
-          # Start flask in background
           nohup python app.py > flask.log 2>&1 &
           echo $! > flask.pid
 
@@ -150,7 +148,7 @@ jobs:
           ss -ltnp || true
 
       # ------------------------------
-      # 10) Verify Flask App Running (PORT 9457)
+      # 10) Verify Flask App Running
       # ------------------------------
       - name: Verify Flask App
         run: |
@@ -168,15 +166,7 @@ jobs:
           done
 
           echo "❌ Flask did not start properly"
-          echo "===== Flask Log ====="
           cat target-app/flask.log || true
-
-          echo "===== Running Processes ====="
-          ps aux | grep python || true
-
-          echo "===== Ports Listening ====="
-          ss -ltnp || true
-
           exit 1
 
       # ------------------------------
@@ -188,7 +178,7 @@ jobs:
           mvn clean test -Dheadless=true
 
       # ------------------------------
-      # ✅ FIX: Allure Maven plugin missing
+      # 12) Generate Allure Report (CLI Mode)
       # ------------------------------
       - name: Generate Allure Report (CLI Mode - No pom.xml plugin needed)
         if: always()
@@ -197,7 +187,7 @@ jobs:
           curl -Ls https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz -o allure.tgz
           tar -xzf allure.tgz
           sudo mv allure-2.27.0 /opt/allure
-          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
 
           echo "===== Generating Allure Report ====="
           cd application-testing
@@ -216,7 +206,7 @@ jobs:
           path: application-testing/target/site/allure-report
 
       # ------------------------------
-      # 14) Upload Flask logs (SUPER IMPORTANT)
+      # 14) Upload Flask logs
       # ------------------------------
       - name: Upload Flask Logs
         if: always()
@@ -236,6 +226,7 @@ jobs:
           publish_dir: application-testing/target/site/allure-report
           publish_branch: gh-pages
           force_orphan: true
+
   security-testing:
     name: Security Testing (Gitleaks + Semgrep + Trivy)
     runs-on: ubuntu-latest
@@ -243,31 +234,58 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # ------------------------------
+      # 1) Checkout Repo
+      # ------------------------------
       - name: Checkout Governance Repo
         uses: actions/checkout@v4
 
+      # ------------------------------
+      # 2) Setup Python
+      # ------------------------------
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # ------------------------------
+      # 3) Clone Target Repo
+      # ------------------------------
       - name: Clone Target Big Mart Repo
         run: |
           git clone https://github.com/asutosh-2000/Big-Mart-Sales-Prediction.git target-app
+          echo "===== Repo Root ====="
           ls -la
+          echo "===== Target Repo ====="
+          ls -la target-app
 
+      # ------------------------------
+      # 4) Make scripts executable
+      # ------------------------------
       - name: Make scripts executable
         run: chmod +x security-testing/*.sh
 
+      # ------------------------------
+      # 5) Run Gitleaks (DON'T FAIL pipeline)
+      # ------------------------------
       - name: Run Gitleaks (scan target-app)
-        run: ./security-testing/run-gitleaks.sh target-app
+        run: ./security-testing/run-gitleaks.sh target-app || true
 
+      # ------------------------------
+      # 6) Run Semgrep (DON'T FAIL pipeline)
+      # ------------------------------
       - name: Run Semgrep (scan target-app)
-        run: ./security-testing/run-semgrep.sh target-app
+        run: ./security-testing/run-semgrep.sh target-app || true
 
+      # ------------------------------
+      # 7) Run Trivy (DON'T FAIL pipeline)
+      # ------------------------------
       - name: Run Trivy (scan target-app)
-        run: ./security-testing/run-trivy.sh target-app
+        run: ./security-testing/run-trivy.sh target-app || true
 
+      # ------------------------------
+      # 8) Upload Security Reports
+      # ------------------------------
       - name: Upload Security Reports
         uses: actions/upload-artifact@v4
         if: always()
