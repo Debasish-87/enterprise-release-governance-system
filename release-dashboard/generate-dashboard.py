@@ -424,64 +424,90 @@ print("✅ Release dashboard generated: release-dashboard/index.html")
 # ============================================================
 # EXTRA: Generate release-summary.json (FOR LAYER 6)
 # ============================================================
+# ============================================================
+# EXTRA: Generate release-summary.json (FOR LAYER 6)
+# ============================================================
+
+# Layer 6 expects strict keys: layers -> layer1/layer2/layer3/layer4
+# And status should be PASSED/FAILED (not emoji)
+
+layer1_status = "PASSED" if ("PASSED" in allure_status) else "FAILED"
 
 release_summary = {
     "repo": repo,
     "commit": sha,
     "run_id": run_id,
-    "run_url": run_url,
-    "generated": generated_time,
+    "run_link": run_url,
+    "generated_at": generated_time,
 
-    "layer1_application_testing": {
-        "status": allure_status,
-        "total": allure_total,
-        "passed": allure_passed,
-        "failed": allure_failed,
-        "broken": allure_broken,
-        "skipped": allure_skipped,
-        "allure_pages_url": allure_pages_url
-    },
+    "layers": {
+        "layer1": {
+            "status": layer1_status,
+            "allure_pages_url": allure_pages_url,
+            "total": allure_total,
+            "passed": allure_passed,
+            "failed": allure_failed,
+            "broken": allure_broken,
+            "skipped": allure_skipped
+        },
 
-    "layer2_security_scans": {
-        "gitleaks": {
-            "findings": gitleaks_findings,
-            "top_findings": gitleaks_top
+        "layer2": {
+            "gitleaks": {
+                "findings": gitleaks_findings,
+                "top_findings": gitleaks_top
+            },
+            "semgrep": {
+                "findings": semgrep_findings,
+                "error": semgrep_sev.get("ERROR", 0),
+                "warning": semgrep_sev.get("WARNING", 0),
+                "info": semgrep_sev.get("INFO", 0),
+                "top_findings": semgrep_top
+            },
+            "trivy": {
+                "findings": trivy_findings,
+                "critical": trivy_sev.get("CRITICAL", 0),
+                "high": trivy_sev.get("HIGH", 0),
+                "medium": trivy_sev.get("MEDIUM", 0),
+                "low": trivy_sev.get("LOW", 0),
+                "top_vulnerabilities": trivy_top
+            }
         },
-        "semgrep": {
-            "findings": semgrep_findings,
-            "severity": semgrep_sev,
-            "top_findings": semgrep_top
+
+        "layer3": {
+            "sbom_components": sbom_components,
+            "top_components": sbom_top,
+            "grype": {
+                "findings": grype_findings,
+                "critical": grype_sev.get("CRITICAL", 0),
+                "high": grype_sev.get("HIGH", 0),
+                "medium": grype_sev.get("MEDIUM", 0),
+                "low": grype_sev.get("LOW", 0),
+                "unknown": grype_sev.get("UNKNOWN", 0),
+                "top_vulnerabilities": grype_top
+            }
         },
-        "trivy": {
-            "findings": trivy_findings,
-            "severity": trivy_sev,
-            "top_vulnerabilities": trivy_top
+
+        "layer4": {
+            "kpqe_decision": kpqe_decision,
+            "nodes_total": total_nodes,
+            "nodes_ready": ready_nodes,
+            "pods_total": total_pods,
+            "not_ready_nodes": not_ready_nodes,
+            "crashloop_pods": crashloop_pods,
+            "restart_risk_pods": restart_risk_pods,
+            "raw_kpqe_output": kpqe_text
         }
-    },
-
-    "layer3_sbom": {
-        "sbom_components": sbom_components,
-        "top_components": sbom_top,
-        "grype_findings": grype_findings,
-        "grype_severity": grype_sev,
-        "top_vulnerabilities": grype_top
-    },
-
-    "layer4_kpqe_platform": {
-        "decision": kpqe_decision,
-        "nodes_total": total_nodes,
-        "nodes_ready": ready_nodes,
-        "pods_total": total_pods,
-        "not_ready_nodes": not_ready_nodes,
-        "crashloop_pods": crashloop_pods,
-        "restart_risk_pods": restart_risk_pods,
-        "raw_kpqe_output": kpqe_text
-    },
-
-    "final_release_decision": final_decision
+    }
 }
 
-with open("release-dashboard/release-summary.json", "w", encoding="utf-8") as f:
+# IMPORTANT:
+# Layer 6 reads from release-decision/input/release-summary.json
+# But Layer 5 will upload this file as artifact.
+# So keep it inside release-dashboard/output/
+
+os.makedirs("release-dashboard/output", exist_ok=True)
+
+with open("release-dashboard/output/release-summary.json", "w", encoding="utf-8") as f:
     json.dump(release_summary, f, indent=2)
 
-print("✅ Release summary JSON generated: release-dashboard/release-summary.json")
+print("✅ Release summary JSON generated: release-dashboard/output/release-summary.json")
