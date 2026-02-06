@@ -384,7 +384,7 @@ jobs:
             kpqe-platform-testing/kpqe-release-decision.txt
             kpqe-platform-testing/reports/
 
-            
+
   # ============================================================
   #  LAYER 5 — Release Dashboard
   # ============================================================
@@ -482,8 +482,6 @@ jobs:
           path: release-dashboard/output/
 
 
-
-
   # ============================================================
   #  LAYER 6 — Final Release Decision Engine
   # ============================================================
@@ -507,28 +505,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-decision/requirements.txt
 
-      - name: Download all workflow artifacts
+      - name: Download Release Dashboard Artifact
         uses: actions/download-artifact@v4
         with:
-          path: all-artifacts
+          name: release-dashboard
+          path: release-dashboard-artifact
 
-      - name: Debug - list all artifacts
+      - name: Debug - check downloaded artifact
         run: |
-          echo "===== ALL ARTIFACTS ====="
-          ls -R all-artifacts || true
+          echo "===== release-dashboard-artifact ====="
+          ls -R release-dashboard-artifact || true
 
-      - name: Copy release-summary.json into decision engine input folder
+      # ✅ GUARANTEED FIX: Copy release-summary.json correctly
+      - name: Copy release-summary.json into decision engine input
         run: |
           mkdir -p release-decision/input
 
-          if [ ! -f "all-artifacts/release-dashboard/release-summary.json" ]; then
-            echo "❌ release-summary.json missing inside release-dashboard artifact"
-            echo "===== Searching ====="
-            find all-artifacts -name "release-summary.json" || true
+          if [ -f "release-dashboard-artifact/release-summary.json" ]; then
+            cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
+          elif [ -f "release-dashboard-artifact/output/release-summary.json" ]; then
+            cp release-dashboard-artifact/output/release-summary.json release-decision/input/release-summary.json
+          else
+            echo "❌ release-summary.json NOT FOUND in artifact"
+            find release-dashboard-artifact -type f || true
             exit 1
           fi
-
-          cp all-artifacts/release-dashboard/release-summary.json release-decision/input/release-summary.json
 
           echo "✅ Copied release-summary.json successfully"
           ls -la release-decision/input
@@ -543,4 +544,3 @@ jobs:
         with:
           name: final-release-decision
           path: release-decision/output/
-
