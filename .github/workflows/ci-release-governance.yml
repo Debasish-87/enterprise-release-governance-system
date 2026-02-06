@@ -292,3 +292,37 @@ jobs:
         with:
           name: security-reports
           path: security-testing/reports/
+
+  sbom-testing:
+    name: Stage 3.5 - SBOM Generation + SBOM Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: security-testing
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Governance Repo
+        uses: actions/checkout@v4
+
+      - name: Clone Target Big Mart Repo
+        run: |
+          git clone https://github.com/asutosh-2000/Big-Mart-Sales-Prediction.git target-app
+          echo "===== Repo Root ====="
+          ls -la
+          echo "===== Target Repo ====="
+          ls -la target-app
+
+      - name: Make SBOM scripts executable
+        run: chmod +x sbom-testing/*.sh
+
+      - name: Generate SBOM (CycloneDX JSON)
+        run: ./sbom-testing/generate-sbom.sh target-app
+
+      - name: Scan SBOM for Vulnerabilities
+        run: ./sbom-testing/scan-sbom.sh
+
+      - name: Upload SBOM Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom-reports
+          path: sbom-testing/reports/
