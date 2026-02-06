@@ -431,7 +431,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-decision/requirements.txt
 
-      # ✅ FIX: Download Layer 5 output
       - name: Download Release Dashboard Artifact
         uses: actions/download-artifact@v4
         with:
@@ -442,6 +441,14 @@ jobs:
         run: |
           echo "===== release-dashboard ====="
           ls -la release-dashboard
+
+      # ✅ IMPORTANT FIX
+      - name: Copy release-summary.json into decision engine folder
+        run: |
+          mkdir -p release-decision/input
+          cp release-dashboard/release-summary.json release-decision/input/release-summary.json
+          echo "Copied release-summary.json successfully"
+          ls -la release-decision/input
 
       - name: Run Final Release Decision Engine
         run: |
