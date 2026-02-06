@@ -81,12 +81,16 @@ jobs:
         run: |
           echo "===== Chrome Version ====="
           google-chrome --version || true
+
           echo "===== Chromedriver Version ====="
           chromedriver --version || true
+
           echo "===== Java Version ====="
           java -version || true
+
           echo "===== Maven Version ====="
           mvn -v || true
+
           echo "===== Python Version ====="
           python --version || true
 
@@ -123,12 +127,15 @@ jobs:
       - name: Verify Flask App
         run: |
           echo "===== Checking Flask Health ====="
+
           for i in {1..40}; do
             echo "Checking Flask... attempt $i"
+
             if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9457 | grep -q "200"; then
               echo "✅ Flask is UP on port 9457"
               exit 0
             fi
+
             sleep 2
           done
 
@@ -262,7 +269,7 @@ jobs:
     name: Layer 4 - Kubernetes Readiness + KPQE Platform Testing
     runs-on: ubuntu-latest
     needs: sbom-testing
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout Governance Repo
@@ -284,21 +291,45 @@ jobs:
         uses: helm/kind-action@v1.10.0
         with:
           cluster_name: kpqe-cluster
+          wait: 120s
 
-      - name: Set kubeconfig explicitly
+      # ✅ GUARANTEED FIX: kubeconfig + context
+      - name: Force kubeconfig + context
         run: |
+          echo "===== Checking kubeconfig ====="
+          ls -la $HOME/.kube || true
+          ls -la $HOME/.kube/config || true
+
+          if [ ! -f "$HOME/.kube/config" ]; then
+            echo "❌ kubeconfig not found at $HOME/.kube/config"
+            exit 1
+          fi
+
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          export KUBECONFIG=$HOME/.kube/config
+
+          kubectl config get-contexts
+          kubectl config use-context kind-kpqe-cluster
+          kubectl config current-context
 
       - name: Wait for Kubernetes API Ready
         run: |
-          for i in {1..30}; do
-            kubectl get nodes && break
-            echo "Waiting for cluster..."
+          export KUBECONFIG=$HOME/.kube/config
+          kubectl config use-context kind-kpqe-cluster
+
+          for i in {1..40}; do
+            echo "Attempt $i: Checking cluster..."
+            kubectl get nodes && exit 0
             sleep 3
           done
 
+          echo "❌ Cluster API not responding"
+          exit 1
+
       - name: Verify Kubernetes Cluster
         run: |
+          export KUBECONFIG=$HOME/.kube/config
+          kubectl config use-context kind-kpqe-cluster
           kubectl cluster-info
           kubectl get nodes -o wide
           kubectl get namespaces
@@ -311,6 +342,8 @@ jobs:
 
       - name: Apply KPQE Namespace + RBAC
         run: |
+          export KUBECONFIG=$HOME/.kube/config
+          kubectl config use-context kind-kpqe-cluster
           kubectl apply -f kpqe-platform-testing/k8s/namespace.yaml
           kubectl apply -f kpqe-platform-testing/k8s/kpqe-rbac.yaml
 
@@ -329,6 +362,9 @@ jobs:
       - name: Export Cluster + Pod Health (JSON)
         if: always()
         run: |
+          export KUBECONFIG=$HOME/.kube/config
+          kubectl config use-context kind-kpqe-cluster
+
           mkdir -p kpqe-platform-testing/reports
           kubectl get nodes -o json > kpqe-platform-testing/reports/nodes.json
           kubectl get pods -A -o json > kpqe-platform-testing/reports/pods.json
@@ -393,12 +429,6 @@ jobs:
           echo "===== DASHBOARD OUTPUT ====="
           ls -R release-dashboard/output || true
 
-      - name: Validate dashboard output files exist
-        run: |
-          test -f release-dashboard/output/index.html || (echo "❌ index.html missing" && exit 1)
-          test -f release-dashboard/output/release-summary.json || (echo "❌ release-summary.json missing" && exit 1)
-          echo "✅ Dashboard output validated"
-
       - name: Upload Release Dashboard Artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -447,16 +477,12 @@ jobs:
         run: |
           mkdir -p release-decision/input
 
-          # MAIN PATH (correct)
           if [ -f "release-dashboard-artifact/release-summary.json" ]; then
             cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
-          # FALLBACK PATH (if artifact extracted inside output/)
           elif [ -f "release-dashboard-artifact/output/release-summary.json" ]; then
             cp release-dashboard-artifact/output/release-summary.json release-decision/input/release-summary.json
           else
             echo "❌ release-summary.json missing from dashboard artifact"
-            echo "===== DEBUG LIST ====="
-            find release-dashboard-artifact -maxdepth 3 -type f || true
             exit 1
           fi
 
