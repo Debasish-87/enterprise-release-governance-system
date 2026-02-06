@@ -236,7 +236,6 @@ jobs:
           publish_dir: application-testing/target/site/allure-report
           publish_branch: gh-pages
           force_orphan: true
-
   security-testing:
     name: Security Testing (Gitleaks + Semgrep + Trivy)
     runs-on: ubuntu-latest
@@ -244,46 +243,31 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      # 1) Checkout Governance Repo
       - name: Checkout Governance Repo
         uses: actions/checkout@v4
 
-      # 2) Setup Python (Semgrep needs it)
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3) Clone Target App Repo (same as testing job)
       - name: Clone Target Big Mart Repo
         run: |
           git clone https://github.com/asutosh-2000/Big-Mart-Sales-Prediction.git target-app
-          echo "===== Target Repo Files ====="
-          ls -la target-app
+          ls -la
 
-      # 4) Make scripts executable
       - name: Make scripts executable
         run: chmod +x security-testing/*.sh
 
-      # 5) Run Gitleaks (scan target-app)
-      - name: Run Gitleaks
-        run: |
-          cd target-app
-          ../security-testing/run-gitleaks.sh
+      - name: Run Gitleaks (scan target-app)
+        run: ./security-testing/run-gitleaks.sh target-app
 
-      # 6) Run Semgrep (scan target-app)
-      - name: Run Semgrep
-        run: |
-          cd target-app
-          ../security-testing/run-semgrep.sh
+      - name: Run Semgrep (scan target-app)
+        run: ./security-testing/run-semgrep.sh target-app
 
-      # 7) Run Trivy (scan target-app)
-      - name: Run Trivy
-        run: |
-          cd target-app
-          ../security-testing/run-trivy.sh
+      - name: Run Trivy (scan target-app)
+        run: ./security-testing/run-trivy.sh target-app
 
-      # 8) Upload Security Reports
       - name: Upload Security Reports
         uses: actions/upload-artifact@v4
         if: always()
