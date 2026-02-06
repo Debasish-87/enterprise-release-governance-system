@@ -370,8 +370,7 @@ jobs:
             kpqe-platform-testing/kpqe-release-decision.txt
             kpqe-platform-testing/reports/
 
-            
-  # ============================================================
+              # ============================================================
   #  LAYER 5 — Release Dashboard
   # ============================================================
   release-dashboard:
@@ -394,40 +393,42 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-dashboard/requirements.txt
 
-      # ✅ FIX: Download ONLY required artifacts (avoid KIND logs artifact)
-      - name: Download required artifacts only
+      # ============================================================
+      # ✅ FIX: Download ONLY required artifacts (NO kind logs)
+      # ============================================================
+
+      - name: Download Allure Report Artifact
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          pattern: "*"
-          merge-multiple: false
+          name: allure-report
+          path: artifacts/allure-report
 
-      # ✅ FIX: Remove unwanted artifacts (like kind logs) safely
-      - name: Keep only required artifacts
-        run: |
-          echo "===== BEFORE FILTER ====="
-          ls -la artifacts || true
+      - name: Download Security Reports Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: security-reports
+          path: artifacts/security-reports
 
-          mkdir -p artifacts_filtered
+      - name: Download SBOM Reports Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-reports
+          path: artifacts/sbom-reports
 
-          # keep only these
-          for d in allure-report security-reports sbom-reports kpqe-platform-reports; do
-            if [ -d "artifacts/$d" ]; then
-              cp -r "artifacts/$d" artifacts_filtered/
-            fi
-          done
-
-          rm -rf artifacts
-          mv artifacts_filtered artifacts
-
-          echo "===== AFTER FILTER ====="
-          ls -la artifacts || true
+      - name: Download KPQE Reports Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kpqe-platform-reports
+          path: artifacts/kpqe-platform-reports
 
       - name: Debug - list downloaded artifacts
         run: |
           echo "===== ARTIFACTS DOWNLOADED ====="
           ls -R artifacts || true
 
+      # ============================================================
+      # Prepare dashboard inputs
+      # ============================================================
       - name: Prepare dashboard inputs
         run: |
           mkdir -p security-testing/reports
@@ -446,11 +447,16 @@ jobs:
           ls -la kpqe-platform-testing/reports || true
           ls -la application-testing/target/site/allure-report || true
 
+      # ============================================================
+      # Generate dashboard
+      # ============================================================
       - name: Generate dashboard
         run: |
           python release-dashboard/generate-dashboard.py
 
+      # ============================================================
       # ✅ GUARANTEED FIX: Normalize output folder
+      # ============================================================
       - name: Normalize dashboard output (GUARANTEED)
         run: |
           mkdir -p release-dashboard/output
@@ -468,11 +474,6 @@ jobs:
           if [ -f "release-dashboard/release-summary.json" ]; then
             cp release-dashboard/release-summary.json release-dashboard/output/release-summary.json
             echo "✅ Copied release-summary.json -> output/"
-          fi
-
-          # Copy release-summary.json (already output)
-          if [ -f "release-dashboard/output/release-summary.json" ]; then
-            echo "✅ release-summary.json already present in output/"
           fi
 
           # Final check
