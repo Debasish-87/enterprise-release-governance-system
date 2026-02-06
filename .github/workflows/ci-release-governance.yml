@@ -393,7 +393,12 @@ jobs:
           echo "===== DASHBOARD OUTPUT ====="
           ls -R release-dashboard/output || true
 
-      # ✅ FIXED UPLOAD PATH (IMPORTANT)
+      - name: Validate dashboard output files exist
+        run: |
+          test -f release-dashboard/output/index.html || (echo "❌ index.html missing" && exit 1)
+          test -f release-dashboard/output/release-summary.json || (echo "❌ release-summary.json missing" && exit 1)
+          echo "✅ Dashboard output validated"
+
       - name: Upload Release Dashboard Artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -438,17 +443,20 @@ jobs:
           echo "===== release-dashboard-artifact ====="
           ls -R release-dashboard-artifact || true
 
-      # ✅ FIXED PATH (IMPORTANT)
       - name: Copy release-summary.json into decision engine input folder
         run: |
           mkdir -p release-decision/input
 
-          if [ ! -f "release-dashboard-artifact/release-summary.json" ] && [ -f "release-dashboard-artifact/output/release-summary.json" ]; then
-            cp release-dashboard-artifact/output/release-summary.json release-decision/input/release-summary.json
-          elif [ -f "release-dashboard-artifact/release-summary.json" ]; then
+          # MAIN PATH (correct)
+          if [ -f "release-dashboard-artifact/release-summary.json" ]; then
             cp release-dashboard-artifact/release-summary.json release-decision/input/release-summary.json
+          # FALLBACK PATH (if artifact extracted inside output/)
+          elif [ -f "release-dashboard-artifact/output/release-summary.json" ]; then
+            cp release-dashboard-artifact/output/release-summary.json release-decision/input/release-summary.json
           else
             echo "❌ release-summary.json missing from dashboard artifact"
+            echo "===== DEBUG LIST ====="
+            find release-dashboard-artifact -maxdepth 3 -type f || true
             exit 1
           fi
 
