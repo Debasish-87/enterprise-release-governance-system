@@ -369,7 +369,6 @@ jobs:
           path: |
             kpqe-platform-testing/kpqe-release-decision.txt
             kpqe-platform-testing/reports/
-
   # ============================================================
   #  LAYER 5 — Release Dashboard
   # ============================================================
@@ -393,10 +392,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r release-dashboard/requirements.txt
 
-      - name: Download all workflow artifacts
+      # ✅ FIX: Download ONLY required artifacts (avoid KIND logs artifact)
+      - name: Download required artifacts only
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: |
+            allure-report
+            security-reports
+            sbom-reports
+            kpqe-platform-reports
 
       - name: Debug - list downloaded artifacts
         run: |
@@ -465,7 +470,6 @@ jobs:
         with:
           name: release-dashboard
           path: release-dashboard/output/
-
 
   # ============================================================
   #  LAYER 6 — Final Release Decision Engine
