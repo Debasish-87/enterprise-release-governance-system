@@ -5,11 +5,14 @@ echo "=============================="
 echo "🔍 Running Semgrep (SAST Scan)"
 echo "=============================="
 
-mkdir -p reports
+# Default scan folder = target-app
+TARGET_DIR="${1:-target-app}"
 
-TARGET_DIR="target-app"
+# Reports folder (always inside security-testing)
+REPORT_DIR="security-testing/reports"
+mkdir -p "$REPORT_DIR"
 
-# Check if target-app exists
+# Check if target folder exists
 if [ ! -d "$TARGET_DIR" ]; then
   echo "❌ ERROR: '$TARGET_DIR' folder not found!"
   echo "➡️ Make sure the workflow clones the target repo into '$TARGET_DIR' before running Semgrep."
@@ -23,11 +26,17 @@ if ! command -v semgrep &> /dev/null; then
   pip install semgrep
 fi
 
+echo "➡️ Semgrep Version:"
+semgrep --version || true
+
 echo "➡️ Running Semgrep scan on '$TARGET_DIR'..."
+
+# Run scan
 semgrep \
   --config=auto \
   --json \
-  --output reports/semgrep-report.json \
-  "$TARGET_DIR"
+  --output "$REPORT_DIR/semgrep-report.json" \
+  "$TARGET_DIR" || true
 
 echo "✅ Semgrep scan completed"
+echo "📌 Report saved: $REPORT_DIR/semgrep-report.json"

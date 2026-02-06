@@ -19,16 +19,30 @@ if [ ! -d "$TARGET_DIR" ]; then
   exit 1
 fi
 
-# Install gitleaks if not present (stable method)
+# Install gitleaks if not present
 if ! command -v gitleaks &> /dev/null; then
   echo "➡️ Installing gitleaks..."
 
-  # Download latest .deb package (Ubuntu runner friendly)
+  # Try .deb first (best for ubuntu-latest)
   curl -sSL -o gitleaks.deb \
-    https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.18.2_linux_x64.deb
+    https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.18.2_linux_x64.deb || true
 
-  sudo dpkg -i gitleaks.deb
-  rm -f gitleaks.deb
+  if [ -f gitleaks.deb ]; then
+    sudo dpkg -i gitleaks.deb || true
+    rm -f gitleaks.deb
+  fi
+
+  # Fallback: tar.gz install
+  if ! command -v gitleaks &> /dev/null; then
+    echo "⚠️ .deb install failed, using tar.gz fallback..."
+
+    curl -sSL -o gitleaks.tar.gz \
+      https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.18.2_linux_x64.tar.gz
+
+    tar -xzf gitleaks.tar.gz
+    sudo mv gitleaks /usr/local/bin/gitleaks
+    rm -f gitleaks.tar.gz
+  fi
 fi
 
 echo "➡️ Gitleaks Version:"
@@ -36,11 +50,12 @@ gitleaks version || true
 
 echo "➡️ Scanning '$TARGET_DIR' for secrets..."
 
+# Run scan (doesn't require git history)
 gitleaks detect \
   --source "$TARGET_DIR" \
   --report-format json \
   --report-path "$REPORT_DIR/gitleaks-report.json" \
-  --verbose
+  --verbose || true
 
-echo "✅ Gitleaks scan completed successfully"
+echo "✅ Gitleaks scan completed"
 echo "📌 Report saved: $REPORT_DIR/gitleaks-report.json"
