@@ -1,0 +1,34 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd" >
+<suite name="BSMP Intelligent Testing Suite"
+       verbose="1"
+       preserve-order="true">
+
+    <!-- ===============================
+         LISTENERS
+    =============================== -->
+    <listeners>
+        <listener class-name="listeners.ReleaseDecisionListener"/>
+    </listeners>
+
+    <!-- ===============================
+         UI TESTS
+    =============================== -->
+    <test name="BSMP UI Tests" group-by-instances="true">
+
+        <groups>
+            <run>
+                <include name="Smoke"/>
+                <include name="Critical"/>
+                <include name="Regression"/>
+            </run>
+        </groups>
+
+        <classes>
+            <class name="tests.ui.BSMPSmokeTests"/>
+            <class name="tests.intelligence.ReleaseDecisionReporterTest"/>
+
+        </classes>
+
+    </test>
+
+</suite>
